@@ -1,3 +1,13 @@
+data
+figure
+partial
+*.bin
+train[0-9]*.py
+train[0-9]*.sh
+.idea
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
