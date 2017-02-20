@@ -2,7 +2,7 @@
 #PBS -S /bin/bash
 
 module load python
-cd ~/PaperReplication/Crossprop
+cd ~/Crossprop
 export PYTHONPATH=$PWD
 echo "Current working directory is `pwd`"
 

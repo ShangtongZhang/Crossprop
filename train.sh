@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -S /bin/bash
 
-cd ~/PaperReplication/Crossprop
+cd ~/Crossprop
 export PYTHONPATH=$PWD
 echo "Current working directory is `pwd`"
 

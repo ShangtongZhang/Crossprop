@@ -22,7 +22,7 @@ fr.close()
 trainIndices = np.arange(totalTrainX.shape[0])
 testIndices = np.arange(totalTestX.shape[0])
 
-runs = 6
+runs = 30
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
 labels = ['Backprop', 'Crossprop']
@@ -77,33 +77,41 @@ def train(stepSize, hiddenUnits, nSample):
     trainErrors = np.zeros((len(labels), runs, epochs))
     testErrors = np.zeros(trainErrors.shape)
 
-    nThreads = 6
-    step = runs // nThreads
-    startRun = []
-    endRun = []
-    for i in range(nThreads):
-        startRun.append(i * step)
-        endRun.append((i + 1) * step)
-    endRun[-1] = runs
-    args = []
-    for i in range(len(startRun)):
-        args.append((stepSize, hiddenUnits, nSample, startRun[i], endRun[i], trainErrors, testErrors))
-        # trainUnit(stepSize, hiddenUnits, nSample, startRun[i], endRun[i], trainErrors, testErrors)
-    results = Pool(nThreads).map(trainUnitWrapper, args)
-    for trError, teError in results:
-        trainErrors += trError
-        testErrors += teError
+    nThreads = 1
+    # step = runs // nThreads
+    startRun = [@@]
+    endRun = [@@@]
+    # for i in range(nThreads):
+    #     startRun.append(i * step)
+    #     endRun.append((i + 1) * step)
+    # endRun[-1] = runs
+    trainUnit(stepSize, hiddenUnits, nSample, startRun[0], endRun[0], trainErrors, testErrors)
+    # args = []
+    # for i in range(len(startRun)):
+    #     args.append((data, stepSize, learnerFeatures, nSample, startRun[i], endRun[i], trainErrors, testErrors))
+    # results = Pool(nThreads).map(trainUnitWrapper, args)
+    # for trError, teError in results:
+    #     trainErrors += trError
+    #     testErrors += teError
 
-    fw = open('data/YAD_' + str(hiddenUnits) + '_' + str(stepSize) + '_' + str(nSample) + '.bin', 'wb')
+    fw = open('data/YAD_partial_' + str(startRun[0]) + '_' + str(hiddenUnits) + '_' + str(stepSize) + '_' + str(nSample) + '.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'hiddenUnits': hiddenUnits}, fw)
     fw.close()
 
 
-samples = [6500, 9500, 12500]
-hiddenUnits = [100, 300, 500, 700, 900, 1000, 2000]
-stepSizes = np.power(2., np.arange(-17, -11))
+# samples = [5500, 9500, 13500]
+# samples = [3500, 6500, 9500]
+# samples = [13500, 18500, 23500]
+samples = [40500]
+# hiddenUnits = [60]
+hiddenUnits = [200]
+# samples = []
+# hiddenUnits = [500]
+# hiddenUnits = [100, 300, 500, 700, 900, 1000, 2000]
+stepSizes = np.power(2., np.arange(-17, -10))
+# stepSizes = np.power(2., np.arange(-11, -5))
 
-for step in stepSizes:
-    train(step, 100, 6500)
+# for step in stepSizes[3:]:
+#     train(step, hiddenUnits[0], samples[1])

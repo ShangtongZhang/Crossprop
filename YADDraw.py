@@ -34,7 +34,7 @@ labels = ['Backprop', 'Crossprop']
 epochs = 200
 runs = 6
 # samples = [3500, 6500, 15500, 24500]
-units = [100]
+units = [500]
 samples = [3500]
 
 for nSample in samples:
@@ -62,13 +62,13 @@ for nSample in samples:
                         line = 'solid'
                         color = 'r'
                     # plt.errorbar(np.arange(epochs), testMean[i, :], testStd[i, :], label=labels[i]+str(step))
-                    # plt.plot(np.arange(epochs), testMean[i, :], linestyle=line, label=labels[i]+str(step))
-                    plt.plot(np.arange(epochs), testMean[i, :], linestyle=line, color=color, label=labels[i]+str(step))
+                    plt.plot(np.arange(epochs), testMean[i, :], linestyle=line, label=labels[i]+str(step))
+                    # plt.plot(np.arange(epochs), testMean[i, :], linestyle=line, color=color, label=labels[i]+str(step))
                     # plt.plot(np.arange(epochs), trainMean[i, :], label=labels[i]+str(step))
 
     plt.xlabel('Sweep')
     plt.ylabel('Average MSE')
-    plt.ylim([0, 1])
+    plt.ylim([0, 50])
     plt.title('YAD_'+str(unit)+'_'+str(nTrainExamples))
     plt.legend()
     # plt.savefig('figure/tanh_test_' + str(unit)+ '.png')

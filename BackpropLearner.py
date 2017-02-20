@@ -10,13 +10,19 @@ from functools import partial
 from multiprocessing import Pool
 import pickle
 from Activation import *
+from Initialization import *
 
 class BackpropLearner:
-    def __init__(self, stepSize, dims, activation='relu'):
+    def __init__(self, stepSize, dims, activation='relu', init='orthogonal'):
         self.stepSize = stepSize
         dims[0] += 1
         dims[1] += 1
-        self.U = np.random.randn(dims[0], dims[1])
+
+        if init == 'orthogonal':
+            self.U = orthogonalInit(dims[0], dims[1])
+        else:
+            self.U = np.random.randn(dims[0], dims[1])
+
         self.W = np.random.randn(dims[1])
         if activation == 'relu':
             self.act = relu
