@@ -14,7 +14,6 @@ from BackpropLearner import *
 from GEOFF import *
 
 fr = open('YAD.bin', 'rb')
-# fr = open('YADReduced.bin', 'rb')
 totalTrainX, totalTestX, totalTrainY, totalTestY = pickle.load(fr)
 totalTrainX = np.concatenate((totalTrainX, np.ones((totalTrainX.shape[0], 1))), 1)
 totalTestX = np.concatenate((totalTestX, np.ones((totalTestX.shape[0], 1))), 1)
@@ -25,8 +24,9 @@ testIndices = np.arange(totalTestX.shape[0])
 runs = 30
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
-labels = ['Backprop', 'Crossprop']
+# labels = ['Backprop', 'Crossprop']
 # labels = ['CrosspropV2']
+labels = ['Backprop-Adam']
 
 def test(learner, testX, testY):
     error = 0.0
@@ -56,9 +56,10 @@ def trainUnit(stepSize, hiddenUnits, nSample, startRun, endRun, trainErrors, tes
         cp = CrossPropLearner(stepSize, list(dims))
         bp = BackpropLearner(stepSize, list(dims))
         cpv2 = CrossPropLearnerV2(stepSize, list(dims))
+        bpAdam = BackpropLearner(stepSize, list(dims), gradient='adam')
         # learners = [bp, cp, cpv2]
-        learners = [bp, cp]
-        # learners = [cpv2]
+        # learners = [bp, cp]
+        learners = [bpAdam]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, hiddenUnits, nSample)
@@ -94,7 +95,7 @@ def train(stepSize, hiddenUnits, nSample):
     #     trainErrors += trError
     #     testErrors += teError
 
-    fw = open('data/YAD_partial_' + str(startRun[0]) + '_' + str(hiddenUnits) + '_' + str(stepSize) + '_' + str(nSample) + '.bin', 'wb')
+    fw = open('data/YAD_adam_partial_' + str(startRun[0]) + '_' + str(hiddenUnits) + '_' + str(stepSize) + '_' + str(nSample) + '.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'hiddenUnits': hiddenUnits}, fw)
@@ -102,11 +103,10 @@ def train(stepSize, hiddenUnits, nSample):
 
 
 # samples = [5500, 9500, 13500]
-# samples = [3500, 6500, 9500]
-# samples = [13500, 18500, 23500]
-samples = [40500]
-# hiddenUnits = [60]
-hiddenUnits = [200]
+samples = [3500, 6500, 9500]
+# samples = [13500, 18500, 23500, 40500]
+hiddenUnits = [60]
+# hiddenUnits = [200]
 # samples = []
 # hiddenUnits = [500]
 # hiddenUnits = [100, 300, 500, 700, 900, 1000, 2000]

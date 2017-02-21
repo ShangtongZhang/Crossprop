@@ -12,8 +12,35 @@ import pickle
 from Activation import *
 from Initialization import *
 
+class GradientAdjuster:
+    def __init__(self, stepSize):
+        self.stepSize = stepSize
+
+    def adjust(self, gradient):
+        return self.stepSize * gradient
+
+class AdamGradientAdjuster:
+    def __init__(self, stepSize):
+        self.stepSize = stepSize
+        self.time = 0
+        self.beta1 = 0.9
+        self.beta2 = 0.999
+        self.beta1t = self.beta2t = 1.0
+        self.epsilon = 1e-8
+        self.m = 0
+        self.v = 0
+
+    def adjust(self, gradient):
+        self.time += 1
+        self.beta1t *= self.beta1
+        self.beta2t *= self.beta2
+        lr = self.stepSize * np.sqrt(1 - self.beta2t) / (1 - self.beta1t)
+        self.m = self.beta1 * self.m + (1 - self.beta1) * gradient
+        self.v = self.beta2 * self.v + (1 - self.beta2) * np.power(gradient, 2)
+        return lr * np.divide(self.m, np.sqrt(self.v) + self.epsilon)
+
 class BackpropLearner:
-    def __init__(self, stepSize, dims, activation='relu', init='orthogonal'):
+    def __init__(self, stepSize, dims, activation='relu', init='orthogonal', gradient=''):
         self.stepSize = stepSize
         dims[0] += 1
         dims[1] += 1
@@ -30,6 +57,13 @@ class BackpropLearner:
         elif activation == 'tanh':
             self.act = tanh
             self.gradientAct = gradientTanh
+
+        if gradient == 'adam':
+            self.WAdjustor = AdamGradientAdjuster(self.stepSize)
+            self.UAdjustor = AdamGradientAdjuster(self.stepSize)
+        else:
+            self.WAdjustor = GradientAdjuster(self.stepSize)
+            self.UAdjustor = GradientAdjuster(self.stepSize)
 
     def predict(self, X=None):
         if X is not None:
@@ -49,7 +83,6 @@ class BackpropLearner:
                                       np.matrix(self.gradientAct(self.phi, self.net))))
         return [gradientW, gradientU]
 
-
     def learn(self, target):
         self.target = target
         error = target - self.y
@@ -57,8 +90,8 @@ class BackpropLearner:
         self.gradientW = gradientW
         self.gradientU = gradientU
         # self.checkGradient()
-        self.W -= self.stepSize * gradientW
-        self.U -= self.stepSize * gradientU
+        self.W -= self.WAdjustor.adjust(self.gradientW)
+        self.U -= self.UAdjustor.adjust(self.gradientU)
         return 0.5 * error * error
 
     def checkGradient(self):

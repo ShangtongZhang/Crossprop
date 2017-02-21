@@ -1,63 +1,86 @@
 prefix = '../Crossprop/train'
 templatePY = 'templateYAD.py'
+# templatePY = 'template.py'
 templateSH = 'template.sh'
 
 appendix = [
     '''
-for step in stepSizes[:3]:
-    train(step, hiddenUnits[0], samples[0])
+for step in stepSizes[:2]:
+    train(step, 200, 40500)
     ''',
     '''
-for step in stepSizes[3:]:
-    train(step, hiddenUnits[0], samples[0])
+for step in stepSizes[2: 4]:
+    train(step, 200, 40500)
+    ''',
+    '''
+for step in stepSizes[4:]:
+    train(step, 200, 40500)
     ''',
     '''
 for step in stepSizes[:2]:
-    train(step, hiddenUnits[0], samples[1])
+    train(step, 200, 23500)
     ''',
     '''
-for step in stepSizes[2: 5]:
-    train(step, hiddenUnits[0], samples[1])
+for step in stepSizes[2: 4]:
+    train(step, 200, 23500)
     ''',
     '''
-for step in stepSizes[5:]:
-    train(step, hiddenUnits[0], samples[1])
+for step in stepSizes[4:]:
+    train(step, 200, 23500)
     ''',
     '''
 for step in stepSizes[:2]:
-    train(step, hiddenUnits[0], samples[2])
+    train(step, 200, 18500)
+    train(step, 200, 13500)
     ''',
     '''
-for step in stepSizes[2: 5]:
-    train(step, hiddenUnits[0], samples[2])
+for step in stepSizes[2: 4]:
+    train(step, 200, 18500)
+    train(step, 200, 13500)
     ''',
     '''
-for step in stepSizes[5:]:
-    train(step, hiddenUnits[0], samples[2])
+for step in stepSizes[4:]:
+    train(step, 200, 18500)
+    train(step, 200, 13500)
     '''
 ]
 
 appendix = [
     '''
-train(stepSizes[0], hiddenUnits[0], samples[0])
+for step in stepSizes[:2]:
+    train(step, 60, 3500)
     ''',
     '''
-train(stepSizes[1], hiddenUnits[0], samples[0])
+for step in stepSizes[2: 4]:
+    train(step, 60, 3500)
     ''',
     '''
-train(stepSizes[2], hiddenUnits[0], samples[0])
+for step in stepSizes[4:]:
+    train(step, 60, 3500)
     ''',
     '''
-train(stepSizes[3], hiddenUnits[0], samples[0])
+for step in stepSizes[:2]:
+    train(step, 60, 6500)
     ''',
     '''
-train(stepSizes[4], hiddenUnits[0], samples[0])
+for step in stepSizes[2: 4]:
+    train(step, 60, 6500)
     ''',
     '''
-train(stepSizes[5], hiddenUnits[0], samples[0])
+for step in stepSizes[4:]:
+    train(step, 60, 6500)
     ''',
     '''
-train(stepSizes[6], hiddenUnits[0], samples[0])
+for step in stepSizes[:2]:
+    train(step, 60, 9500)
+    ''',
+    '''
+for step in stepSizes[2: 4]:
+    train(step, 60, 9500)
+    ''',
+    '''
+for step in stepSizes[4:]:
+    train(step, 60, 9500)
     '''
 ]
 

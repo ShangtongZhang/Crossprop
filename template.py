@@ -17,7 +17,8 @@ from GEOFF import *
 runs = 30
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
-labels = ['Backprop', 'Crossprop']
+# labels = ['Backprop', 'Crossprop']
+labels = ['Backprop-Adam']
 
 def test(learner, testX, testY):
     error = 0.0
@@ -40,15 +41,16 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         dims = [20, learnerFeatures]
         bp = BackpropLearner(stepSize, list(dims))
         cp = CrossPropLearner(stepSize, list(dims))
+        bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='adam')
         # bp = BackpropLearner(steps[0], list(dims))
         # cp = CrossPropLearner(steps[1], list(dims))
         # cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         # learners = [bp, cp, cpv2]
-        learners = [bp, cp]
+        # learners = [bp, cp]
+        learners = [bpAdam]
         # learners = [cpv2]
 
         for ind in range(len(labels)):
-            # print('Run', run, labels[ind], steps[ind], learnerFeatures, nSample)
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)
             for ep in range(epochs):
                 # print('Run', run, labels[ind], 'Epoch', ep)
@@ -84,14 +86,14 @@ def train(stepSize, learnerFeatures, nSample):
     #     trainErrors += trError
     #     testErrors += teError
 
-    fw = open('data2/relu_partial_offline_'+str(startRun[0])+'_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('data/adam_partial_'+str(startRun[0])+'_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': learnerFeatures}, fw)
     fw.close()
 
 # samples = [1500, 3500, 6500, 9500, 12500, 15500, 18500]
-learnerFeatures = [100, 300, 500, 700, 900, 1000, 2000]
+# learnerFeatures = [100, 300, 500, 700, 900, 1000, 2000]
 # stepSizes = [0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
 # stepSizes = np.power(2., np.arange(-16, -7))
 # train(stepSizes[0], learnerFeatures[0], 1500)
@@ -124,5 +126,5 @@ units = [100, 500, 900]
 #     train(stepSizes[5], 900, sample)
 # train(0.00005, 500, 40500)
 
-for step in stepSizes[4:]:
-    train(step, 900, 40500)
+# for step in stepSizes[4:]:
+#     train(step, 900, 40500)

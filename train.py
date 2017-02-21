@@ -14,10 +14,11 @@ from BackpropLearner import *
 from GEOFF import *
 
 # runs = len(data)
-runs = 6
-epochs = 1000
+runs = 30
+epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
-labels = ['Backprop', 'Crossprop']
+# labels = ['Backprop', 'Crossprop']
+labels = ['Backprop-Adam']
 # labels = ['CrosspropV2']
 
 def test(learner, testX, testY):
@@ -40,20 +41,21 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         dims = [20, learnerFeatures]
         cp = CrossPropLearner(stepSize, list(dims))
         bp = BackpropLearner(stepSize, list(dims))
+        bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='adam')
         cpv2 = CrossPropLearnerV2(stepSize, list(dims))
-        learners = [bp, cp, cpv2]
-        # learners = [cpv2]
+        # learners = [bp, cp, cpv2]
+        learners = [bpAdam]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)
             for ep in range(epochs):
-                # print('Run', run, labels[ind], 'Epoch', ep)
                 indices = np.arange(trainX.shape[0])
                 np.random.shuffle(indices)
                 for i in indices:
                     learners[ind].predict(trainX[i, :])
                     trainErrors[ind, run, ep] += learners[ind].learn(trainY[i])
                 testErrors[ind, run, ep] = test(learners[ind], testX, testY)
+                print('Run', run, labels[ind], 'Epoch', ep, testErrors[ind, run, ep])
     return [trainErrors, testErrors]
 
 def train(stepSize, learnerFeatures, nSample):
@@ -79,16 +81,21 @@ def train(stepSize, learnerFeatures, nSample):
         trainErrors += trError
         testErrors += teError
 
-    fw = open('data/one_relu_offline_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('data/adam_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': learnerFeatures}, fw)
     fw.close()
 
-samples = [1500, 3500, 6500, 9500, 12500, 15500, 18500]
-learnerFeatures = [100, 300, 500, 700, 900, 1000, 2000]
-stepSizes = [0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
+# samples = [1500, 3500, 6500, 9500, 12500, 15500, 18500]
+# learnerFeatures = [100, 300, 500, 700, 900, 1000, 2000]
+# stepSizes = [0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
 
+samples = [3500, 6500, 15500, 24500]
+learnerFeatures = [100, 500, 900]
+stepSizes = np.power(2., np.arange(-16, -10))
+
+# train(stepSizes[-1], 500, 3500)
 # train(stepSizes[0], learnerFeatures[0], 1500)
 
 # for units in learnerFeatures:
@@ -104,6 +111,6 @@ stepSizes = [0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
 
 # for sample in samples:
 #     train(0.0001, 300, sample)
-train(0.0001, 500, 1500)
+# train(0.0001, 500, 1500)
 # for step in stepSizes[:3]:
 #     train(step, 500, 1500)

@@ -14,7 +14,6 @@ from BackpropLearner import *
 from GEOFF import *
 
 fr = open('YAD.bin', 'rb')
-# fr = open('YADReduced.bin', 'rb')
 totalTrainX, totalTestX, totalTrainY, totalTestY = pickle.load(fr)
 totalTrainX = np.concatenate((totalTrainX, np.ones((totalTrainX.shape[0], 1))), 1)
 totalTestX = np.concatenate((totalTestX, np.ones((totalTestX.shape[0], 1))), 1)
@@ -22,10 +21,11 @@ fr.close()
 trainIndices = np.arange(totalTrainX.shape[0])
 testIndices = np.arange(totalTestX.shape[0])
 
-runs = 6
+runs = 30
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
-labels = ['Backprop', 'Crossprop']
+# labels = ['Backprop', 'Crossprop']
+labels = ['Backprop-Adam']
 # labels = ['CrosspropV2']
 
 def test(learner, testX, testY):
@@ -55,10 +55,12 @@ def trainUnit(stepSize, hiddenUnits, nSample, startRun, endRun, trainErrors, tes
         dims = [90, hiddenUnits]
         cp = CrossPropLearner(stepSize, list(dims))
         bp = BackpropLearner(stepSize, list(dims))
+        bpAdam = BackpropLearner(stepSize, list(dims), gradient='adam')
         cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         # learners = [bp, cp, cpv2]
-        learners = [bp, cp]
+        # learners = [bp, cp]
         # learners = [cpv2]
+        learners = [bpAdam]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, hiddenUnits, nSample)
@@ -94,7 +96,7 @@ def train(stepSize, hiddenUnits, nSample):
         trainErrors += trError
         testErrors += teError
 
-    fw = open('data/YAD_' + str(hiddenUnits) + '_' + str(stepSize) + '_' + str(nSample) + '.bin', 'wb')
+    fw = open('data/YAD_adam_' + str(hiddenUnits) + '_' + str(stepSize) + '_' + str(nSample) + '.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'hiddenUnits': hiddenUnits}, fw)
