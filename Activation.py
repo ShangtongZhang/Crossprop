@@ -21,3 +21,9 @@ def relu(net):
 
 def gradientRelu(phi, net):
     return np.where(net >= 0, 1, 0)
+
+def sigmoid(net):
+    return 1.0 / (1.0 + np.exp(-net))
+
+def gradientSigmoid(phi, net):
+    return phi * (1 - phi)
