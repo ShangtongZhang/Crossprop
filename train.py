@@ -14,12 +14,13 @@ from BackpropLearner import *
 from GEOFF import *
 
 # runs = len(data)
-runs = 30
+runs = 1
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
 # labels = ['Backprop', 'Crossprop']
-labels = ['Backprop-Adam']
+# labels = ['Backprop-Adam']
 # labels = ['CrosspropV2']
+labels = ['Backprop-RMSProp']
 
 def test(learner, testX, testY):
     error = 0.0
@@ -41,7 +42,7 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         dims = [20, learnerFeatures]
         cp = CrossPropLearner(stepSize, list(dims))
         bp = BackpropLearner(stepSize, list(dims))
-        bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='adam')
+        bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
         cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         # learners = [bp, cp, cpv2]
         learners = [bpAdam]
@@ -81,7 +82,7 @@ def train(stepSize, learnerFeatures, nSample):
         trainErrors += trError
         testErrors += teError
 
-    fw = open('data/adam_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('tmp/rms_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': learnerFeatures}, fw)
@@ -94,6 +95,7 @@ def train(stepSize, learnerFeatures, nSample):
 samples = [3500, 6500, 15500, 24500]
 learnerFeatures = [100, 500, 900]
 stepSizes = np.power(2., np.arange(-16, -10))
+train(stepSizes[0], 500, 3500)
 
 # train(stepSizes[-1], 500, 3500)
 # train(stepSizes[0], learnerFeatures[0], 1500)

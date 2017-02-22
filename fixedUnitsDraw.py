@@ -22,12 +22,12 @@ def getData(hiddenUnits, stepSize, nSample, prefix):
 
 # units = [100, 300, 500, 700, 900, 1100]
 # units = [100, 500, 900]
-units = [100, 500]
-# units = [200]
+# units = [100, 500]
+units = [60]
 # units = [100, 300, 500, 700, 900]
 # stepSizes = [0.00005, 0.0001, 0.0005, 0.001]
-stepSizes = np.power(2., np.arange(-16, -10))
-# stepSizes = np.power(2., np.arange(-17, -5))
+# stepSizes = np.power(2., np.arange(-16, -10))
+stepSizes = np.power(2., np.arange(-17, -5))
 # stepSizes = np.power(2., np.arange(-17, -10))
 # stepSizes = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
 # stepSizes = [0]
@@ -35,9 +35,9 @@ stepSizes = np.power(2., np.arange(-16, -10))
 labels = ['Backprop', 'Crossprop', 'Backprop-Adam']
 epochs = 200
 runs = 3
-samples = [3500, 6500, 15500, 24500]
+# samples = [3500, 6500, 15500, 24500]
 # samples = [6500, 9500, 13500]
-# samples = [3500, 6500, 9500]
+samples = [3500, 6500, 9500]
 # samples = [13500, 18500, 23500]
 # samples = [23500]
 
@@ -54,14 +54,15 @@ for nSample in samples:
         # infoCP[unit] = []
         for stepInd, step in enumerate(stepSizes):
             # data = getData(unit, step, nSample, 'YAD_total_')
-            data = getData(unit, step, nSample, 'relu_total_offline_')
-            data2 = getData(unit, step, nSample, 'adam_total_')
-            # if data is not None:
-            if data is not None and data2 is not None:
+            data = getData(unit, step, nSample, 'YAD_total_')
+            data2 = getData(unit, step, nSample, 'YAD_adam_total_')
+            if data is not None:
+            # if data is not None and data2 is not None:
                 trainErrors, testErrors = data
-                trainErrorsAdam, testErrorsAdam = data2
-                trainErrors = np.concatenate((trainErrors, trainErrorsAdam))
-                testErrors = np.concatenate((testErrors, testErrorsAdam))
+                if data2 is not None:
+                    trainErrorsAdam, testErrorsAdam = data2
+                    trainErrors = np.concatenate((trainErrors, trainErrorsAdam))
+                    testErrors = np.concatenate((testErrors, testErrorsAdam))
 
                 trainErrors /= nTrainExamples
                 testErrors /= nTestExamples
@@ -80,7 +81,7 @@ for nSample in samples:
                 # infoBP[unit].append([testMean[0, -1], step])
                 # infoCP[unit].append([testMean[1, -1], step])
 
-                for i in range(len(labels)):
+                for i in range(testErrors.shape[0]):
                     if labels[i] == 'Backprop':
                         line = 'dashed'
                         color = 'b'
@@ -99,9 +100,9 @@ for nSample in samples:
         plt.xlabel('Sweep')
         plt.ylabel('Average MSE')
         plt.title('relu_'+str(unit)+'_'+str(nTrainExamples))
-        plt.ylim([0, 140])
+        plt.ylim([0, 1])
         plt.legend()
-        plt.savefig('figure/GEOFF_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
+        plt.savefig('figure/YAD_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
         # plt.savefig('figure/relu_train_'+str(unit)+'_'+str(nTrainExamples)+'.png')
         plt.close()
 

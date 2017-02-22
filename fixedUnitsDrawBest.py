@@ -22,12 +22,12 @@ def getData(hiddenUnits, stepSize, nSample, prefix):
 
 # units = [100, 300, 500, 700, 900, 1100]
 # units = [100, 500, 900]
-units = [100, 500]
-# units = [200]
+# units = [100, 500]
+units = [60]
 # units = [100, 300, 500, 700, 900]
 # stepSizes = [0.00005, 0.0001, 0.0005, 0.001]
-stepSizes = np.power(2., np.arange(-16, -10))
-# stepSizes = np.power(2., np.arange(-17, -5))
+# stepSizes = np.power(2., np.arange(-16, -10))
+stepSizes = np.power(2., np.arange(-17, -5))
 # stepSizes = np.power(2., np.arange(-17, -10))
 # stepSizes = np.power(2., np.arange(-16, -7))
 # stepSizes = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
@@ -37,8 +37,8 @@ labels = ['Backprop', 'Crossprop', 'Backprop-Adam']
 # epochs = 1000
 epochs = 200
 runs = 30
-samples = [3500, 6500, 15500, 24500]
-# samples = [3500, 6500, 9500]
+# samples = [3500, 6500, 15500, 24500]
+samples = [3500, 6500, 9500]
 # samples = [23500]
 
 for nSample in samples:
@@ -50,13 +50,16 @@ for nSample in samples:
         # infoCP[unit] = []
         asymptoticError = [[] for _ in range(len(labels))]
         for stepInd, step in enumerate(stepSizes):
-            data = getData(unit, step, nSample, 'relu_total_offline_')
-            data2 = getData(unit, step, nSample, 'adam_total_')
-            if data is not None and data2 is not None:
+            # data = getData(unit, step, nSample, 'relu_total_offline_')
+            # data2 = getData(unit, step, nSample, 'adam_total_')
+            data = getData(unit, step, nSample, 'YAD_total_')
+            data2 = getData(unit, step, nSample, 'YAD_adam_total_')
+            if data is not None:
                 trainErrors, testErrors = data
-                trainErrorsAdam, testErrorsAdam = data2
-                trainErrors = np.concatenate((trainErrors, trainErrorsAdam))
-                testErrors = np.concatenate((testErrors, testErrorsAdam))
+                if data2 is not None:
+                    trainErrorsAdam, testErrorsAdam = data2
+                    trainErrors = np.concatenate((trainErrors, trainErrorsAdam))
+                    testErrors = np.concatenate((testErrors, testErrorsAdam))
 
                 trainErrors /= nTrainExamples
                 testErrors /= nTestExamples
@@ -69,7 +72,7 @@ for nSample in samples:
                 trainStd = np.std(trainErrors, 1) / np.sqrt(runs)
                 testStd = np.std(testErrors, 1) / np.sqrt(runs)
 
-                for i in range(len(labels)):
+                for i in range(testErrors.shape[0]):
                     asymptoticError[i].append([testMean[i, -1], stepInd, step, testMean[i, :], testStd[i, :]])
 
         for i in range(len(labels)):
@@ -86,11 +89,11 @@ for nSample in samples:
         diff = str(asymptoticError[1][0] - asymptoticError[0][0])
         plt.xlabel('Sweep')
         plt.ylabel('Average MSE')
-        plt.ylim([0, 140])
+        plt.ylim([0, 1])
         plt.title('relu_'+str(unit)+'_'+str(nTrainExamples)+'_'+diff)
         plt.legend()
         # plt.savefig('figure/tanh_test_' + str(unit)+ '.png')
         # plt.savefig('figure/tanh_train_' + str(unit)+ '.png')
         # plt.savefig('figure/relu_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
-        plt.savefig('figure/GEOFF_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
+        plt.savefig('figure/YAD_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
         plt.close()

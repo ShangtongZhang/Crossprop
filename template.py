@@ -18,7 +18,8 @@ runs = 30
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
 # labels = ['Backprop', 'Crossprop']
-labels = ['Backprop-Adam']
+# labels = ['Backprop-Adam']
+labels = ['Backprop-RMSProp']
 
 def test(learner, testX, testY):
     error = 0.0
@@ -42,12 +43,13 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         bp = BackpropLearner(stepSize, list(dims))
         cp = CrossPropLearner(stepSize, list(dims))
         bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='adam')
+        bpRMS = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
         # bp = BackpropLearner(steps[0], list(dims))
         # cp = CrossPropLearner(steps[1], list(dims))
         # cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         # learners = [bp, cp, cpv2]
         # learners = [bp, cp]
-        learners = [bpAdam]
+        learners = [bpRMS]
         # learners = [cpv2]
 
         for ind in range(len(labels)):
@@ -86,7 +88,7 @@ def train(stepSize, learnerFeatures, nSample):
     #     trainErrors += trError
     #     testErrors += teError
 
-    fw = open('data/adam_partial_'+str(startRun[0])+'_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('data/RMS_partial_'+str(startRun[0])+'_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': learnerFeatures}, fw)

@@ -18,7 +18,7 @@ def collect(stride, units, stepSize, nSample):
     trainErrors = np.zeros((len(labels), runs, epochs))
     testErrors = np.zeros(trainErrors.shape)
     for startRun in range(0, runs, stride):
-        path = 'partial/adam_partial_'+str(startRun)+'_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
+        path = 'partial/YAD_adam_partial_'+str(startRun)+'_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
         # path = 'partial/YAD_partial_'+str(startRun) + str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
         if not os.path.isfile(path):
             print(path)
@@ -30,7 +30,7 @@ def collect(stride, units, stepSize, nSample):
         trainErrors += trErrors
         testErrors += teErrors
 
-    fw = open('partial/adam_total_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('partial/YAD_adam_total_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': units}, fw)
@@ -47,9 +47,11 @@ stepSizes = np.power(2., np.arange(-16, -10))
 # units = [300, 700]
 # units = [100, 500, 900]
 
-units = [100, 500]
+# units = [100, 500]
+units = [60]
 # samples = [13500, 18500, 23500]
-samples = [3500, 6500, 15500, 24500]
+samples = [3500, 6500, 9500]
+# samples = [3500, 6500, 15500, 24500]
 for step in stepSizes:
     for unit in units:
         for sample in samples:

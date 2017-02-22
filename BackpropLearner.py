@@ -39,11 +39,24 @@ class AdamGradientAdjuster:
         self.v = self.beta2 * self.v + (1 - self.beta2) * np.power(gradient, 2)
         return lr * np.divide(self.m, np.sqrt(self.v) + self.epsilon)
 
-class BackpropLearner:
-    def __init__(self, stepSize, dims, activation='relu', init='orthogonal', gradient=''):
+class RMSPropGradientAdjuster:
+    def __init__(self, stepSize):
         self.stepSize = stepSize
-        dims[0] += 1
-        dims[1] += 1
+        self.eta = 1e-3
+        self.Eg2 = 0
+        self.epsilon = 1e-8
+
+    def adjust(self, gradient):
+        self.Eg2 = 0.9 * self.Eg2 + 0.1 * np.power(gradient, 2)
+        return np.multiply(self.eta / np.sqrt(self.Eg2 + self.epsilon), gradient)
+
+
+class BackpropLearner:
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', gradient=''):
+        self.stepSize = stepSize
+        self.bias = bias
+        dims[0] += int(bias[0])
+        dims[1] += int(bias[1])
 
         if init == 'orthogonal':
             self.U = orthogonalInit(dims[0], dims[1])
@@ -57,10 +70,16 @@ class BackpropLearner:
         elif activation == 'tanh':
             self.act = tanh
             self.gradientAct = gradientTanh
+        elif activation == 'sigmoid':
+            self.act = sigmoid
+            self.gradientAct = gradientSigmoid
 
         if gradient == 'adam':
             self.WAdjustor = AdamGradientAdjuster(self.stepSize)
             self.UAdjustor = AdamGradientAdjuster(self.stepSize)
+        elif gradient == 'RMSProp':
+            self.WAdjustor = RMSPropGradientAdjuster(self.stepSize)
+            self.UAdjustor = RMSPropGradientAdjuster(self.stepSize)
         else:
             self.WAdjustor = GradientAdjuster(self.stepSize)
             self.UAdjustor = GradientAdjuster(self.stepSize)
@@ -69,9 +88,9 @@ class BackpropLearner:
         if X is not None:
             self.X = X
         self.net = np.dot(self.X, self.U)
-        # self.phi = (np.exp(2 * self.net) - 1) / (np.exp(2 * self.net) + 1)
         self.phi = self.act(self.net)
-        self.phi[-1] = 1
+        if self.bias[1]:
+            self.phi[-1] = 1
         self.y = np.dot(self.phi, self.W)
         return self.y
 
@@ -79,7 +98,6 @@ class BackpropLearner:
         gradientW = -error * self.phi
         gradientU = -error * np.multiply(np.repeat(np.matrix(self.W), self.U.shape[0], 0),
                                np.dot(np.matrix(self.X).T,
-                                      # np.matrix(1 - np.power(self.phi, 2))))
                                       np.matrix(self.gradientAct(self.phi, self.net))))
         return [gradientW, gradientU]
 
