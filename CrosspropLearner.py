@@ -53,29 +53,40 @@ class CrossPropLearner:
         self.H = np.multiply(self.H, 1 - self.stepSize * np.repeat(np.matrix(np.power(self.phi, 2)), self.H.shape[0], 0)) + \
             error * self.stepSize * deltaUij
         self.W += self.stepSize * error * self.phi
+        self.inputGradient = -error * np.matrix(self.W * self.gradientAct(self.phi, self.net)) * np.matrix(self.U).T
         return 0.5 * error * error
 
 class CrossPropLearnerV2:
-    def __init__(self, stepSize, dims, activation='relu'):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):
         self.stepSize = stepSize
-        dims[0] += 1
-        dims[1] += 1
-        self.U = np.random.randn(dims[0], dims[1])
+        self.bias = bias
+        dims[0] += int(bias[0])
+        dims[1] += int(bias[1])
+
+        if init == 'orthogonal':
+            self.U = orthogonalInit(dims[0], dims[1])
+        else:
+            self.U = np.random.randn(dims[0], dims[1])
+
         self.W = np.random.randn(dims[1])
         self.H = np.zeros(dims[1])
+
         if activation == 'relu':
             self.act = relu
             self.gradientAct = gradientRelu
         elif activation == 'tanh':
             self.act = tanh
             self.gradientAct = gradientTanh
+        elif activation == 'sigmoid':
+            self.act = sigmoid
+            self.gradientAct = gradientSigmoid
 
     def predict(self, X):
         self.X = X
         self.net = np.dot(self.X, self.U)
-        # self.phi = (np.exp(2 * self.net) - 1) / (np.exp(2 * self.net) + 1)
         self.phi = self.act(self.net)
-        self.phi[-1] = 1
+        if self.bias[1]:
+            self.phi[-1] = 1
         self.y = np.dot(self.phi, self.W)
         return self.y
 

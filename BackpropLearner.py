@@ -99,6 +99,7 @@ class BackpropLearner:
         gradientU = -error * np.multiply(np.repeat(np.matrix(self.W), self.U.shape[0], 0),
                                np.dot(np.matrix(self.X).T,
                                       np.matrix(self.gradientAct(self.phi, self.net))))
+        self.inputGradient = -error * np.matrix(self.W * self.gradientAct(self.phi, self.net)) * np.matrix(self.U).T
         return [gradientW, gradientU]
 
     def learn(self, target):

@@ -11,16 +11,17 @@ from multiprocessing import Pool, Process
 import pickle
 from CrosspropLearner import *
 from BackpropLearner import *
+from DeepBackpropLearner import *
 from GEOFF import *
 
 # runs = len(data)
-runs = 1
+runs = 6
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
-# labels = ['Backprop', 'Crossprop']
+labels = ['Backprop', 'Crossprop']
 # labels = ['Backprop-Adam']
 # labels = ['CrosspropV2']
-labels = ['Backprop-RMSProp']
+# labels = ['Backprop-RMSProp']
 
 def test(learner, testX, testY):
     error = 0.0
@@ -39,13 +40,16 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         trainY = Y[: sep]
         testX = X[sep:]
         testY = Y[sep:]
-        dims = [20, learnerFeatures]
-        cp = CrossPropLearner(stepSize, list(dims))
-        bp = BackpropLearner(stepSize, list(dims))
+        dims = [20, learnerFeatures, 50]
+        # cp = CrossPropLearner(stepSize, list(dims))
+        # bp = BackpropLearner(stepSize, list(dims))
         bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
         cpv2 = CrossPropLearnerV2(stepSize, list(dims))
+        bp = DeepBackpropLearner(stepSize, list(dims), outputLayer='bp')
+        cp = DeepBackpropLearner(stepSize, list(dims), outputLayer='cp')
         # learners = [bp, cp, cpv2]
-        learners = [bpAdam]
+        # learners = [bpAdam]
+        learners = [bp, cp]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)
@@ -82,7 +86,7 @@ def train(stepSize, learnerFeatures, nSample):
         trainErrors += trError
         testErrors += teError
 
-    fw = open('tmp/rms_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('tmp/deep_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': learnerFeatures}, fw)
@@ -95,7 +99,8 @@ def train(stepSize, learnerFeatures, nSample):
 samples = [3500, 6500, 15500, 24500]
 learnerFeatures = [100, 500, 900]
 stepSizes = np.power(2., np.arange(-16, -10))
-train(stepSizes[0], 500, 3500)
+for step in stepSizes[: 3]:
+    train(step, 500, 3500)
 
 # train(stepSizes[-1], 500, 3500)
 # train(stepSizes[0], learnerFeatures[0], 1500)
