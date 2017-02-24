@@ -13,8 +13,9 @@ from Activation import *
 from Initialization import *
 
 class CrossPropLearner:
-    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', asOutput=False):
         self.stepSize = stepSize
+        self.asOutput = asOutput
         self.bias = bias
         dims[0] += int(bias[0])
         dims[1] += int(bias[1])
@@ -53,7 +54,13 @@ class CrossPropLearner:
         self.H = np.multiply(self.H, 1 - self.stepSize * np.repeat(np.matrix(np.power(self.phi, 2)), self.H.shape[0], 0)) + \
             error * self.stepSize * deltaUij
         self.W += self.stepSize * error * self.phi
-        self.inputGradient = -error * np.matrix(self.W * self.gradientAct(self.phi, self.net)) * np.matrix(self.U).T
+        if self.asOutput:
+            errorNet = -error * self.W * self.gradientAct(self.phi, self.net)
+            if self.bias[1]:
+                errorNet[-1] = 0
+            self.inputGradient = np.matrix(errorNet) * np.matrix(self.U).T
+            if self.bias[0]:
+                self.inputGradient[:, -1] = 0
         return 0.5 * error * error
 
 class CrossPropLearnerV2:

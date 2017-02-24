@@ -52,8 +52,9 @@ class RMSPropGradientAdjuster:
 
 
 class BackpropLearner:
-    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', gradient=''):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', gradient='', asOutput=False):
         self.stepSize = stepSize
+        self.asOutput = asOutput
         self.bias = bias
         dims[0] += int(bias[0])
         dims[1] += int(bias[1])
@@ -96,10 +97,15 @@ class BackpropLearner:
 
     def getGradient(self, error):
         gradientW = -error * self.phi
-        gradientU = -error * np.multiply(np.repeat(np.matrix(self.W), self.U.shape[0], 0),
-                               np.dot(np.matrix(self.X).T,
-                                      np.matrix(self.gradientAct(self.phi, self.net))))
-        self.inputGradient = -error * np.matrix(self.W * self.gradientAct(self.phi, self.net)) * np.matrix(self.U).T
+        errorNet = -error * np.multiply(np.matrix(self.W),
+                                        np.matrix(self.gradientAct(self.phi, self.net)))
+        if self.bias[1]:
+            errorNet[:, -1] = 0
+        gradientU = np.matrix(self.X).T * errorNet
+        if self.asOutput:
+            self.inputGradient = errorNet * np.matrix(self.U).T
+            if self.bias[0]:
+                self.inputGradient[:, -1] = 0
         return [gradientW, gradientU]
 
     def learn(self, target):
@@ -114,7 +120,7 @@ class BackpropLearner:
         return 0.5 * error * error
 
     def checkGradient(self):
-        epsilon = 1e-5
+        epsilon = 1e-8
         for i in range(len(self.W)):
             self.W[i] += epsilon
             y1 = self.predict()
@@ -124,8 +130,8 @@ class BackpropLearner:
             error2 = self.target - y2
             self.W[i] += epsilon
             g = 0.5 * (error1 * error1 - error2 * error2) / (2 * epsilon)
-            if np.abs(self.gradientW[i] - g) > epsilon:
-                print('W[', i, ']Gradient Error:')
+            if np.abs(self.gradientW[i] - g) > 0.01:
+                print('W[', i, ']Gradient Error:', g, self.gradientW[i])
 
         for i in range(self.U.shape[0]):
             for j in range(self.U.shape[1]):
@@ -137,5 +143,5 @@ class BackpropLearner:
                 error2 = self.target - y2
                 self.U[i, j] += epsilon
                 g = 0.5 * (error1 * error1 - error2 * error2) / (2 * epsilon)
-                if np.abs(self.gradientU[i, j] - g) > epsilon:
-                    print('U[', i, j, ']Gradient Error:')
+                if np.abs(self.gradientU[i, j] - g) > 0.01:
+                    print('U[', i, j, ']Gradient Error:', g, self.gradientU[i, j])

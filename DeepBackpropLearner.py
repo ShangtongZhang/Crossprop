@@ -19,9 +19,9 @@ class DeepBackpropLearner:
         self.stepSize = stepSize
         self.bias = bias
         if outputLayer == 'cp':
-            self.outputLayer = CrossPropLearner(stepSize, list(dims[1:]), bias=bias[1:], activation=activation, init=init)
+            self.outputLayer = CrossPropLearner(stepSize, list(dims[1:]), bias=bias[1:], activation=activation, init=init, asOutput=True)
         elif outputLayer == 'bp':
-            self.outputLayer = BackpropLearner(stepSize, list(dims[1:]), bias=bias[1:], activation=activation, init=init)
+            self.outputLayer = BackpropLearner(stepSize, list(dims[1:]), bias=bias[1:], activation=activation, init=init, asOutput=True)
 
         for i in range(len(dims)):
             dims[i] += int(bias[i])

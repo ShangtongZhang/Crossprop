@@ -99,9 +99,9 @@ def train(stepSize, learnerFeatures, nSample):
 samples = [3500, 6500, 15500, 24500]
 learnerFeatures = [100, 500, 900]
 stepSizes = np.power(2., np.arange(-16, -10))
-for step in stepSizes[: 3]:
-    train(step, 500, 3500)
-
+# for step in stepSizes[: 3]:
+#     train(step, 500, 3500)
+train(stepSizes[0], 500, 3500)
 # train(stepSizes[-1], 500, 3500)
 # train(stepSizes[0], learnerFeatures[0], 1500)
 
