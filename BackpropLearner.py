@@ -5,8 +5,7 @@
 #######################################################################
 
 from __future__ import print_function
-# import numpy as np
-import minpy.numpy as np
+import numpy as np
 from functools import partial
 from multiprocessing import Pool
 import pickle

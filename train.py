@@ -30,7 +30,7 @@ def test(learner, testX, testY):
 def trainUnitWrapper(args):
    return trainUnit(*args)
 
-def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors, batchSize=1):
+def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors, batchSize=100):
     sep = nSample - 500
     for run in range(startRun, endRun):
         X, Y = data[run]
@@ -38,20 +38,20 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         trainY = np.matrix(Y[: sep]).T
         testX = np.matrix(X[sep:])
         testY = np.matrix(Y[sep:]).T
-        dims = [20, learnerFeatures, 50]
-        # dims = [20, learnerFeatures]
-        # bp = BackpropLearner(stepSize, list(dims), init='normal')
-        # cp = CrossPropLearner(stepSize, list(dims), init='normal')
+        # dims = [20, learnerFeatures, 50]
+        dims = [20, learnerFeatures]
+        bp = BackpropLearner(stepSize, list(dims), init='normal')
+        cp = CrossPropLearner(stepSize, list(dims), init='normal')
         # bp = BackpropLearner(stepSize, list(dims))
         # cp = CrossPropLearner(stepSize, list(dims))
         # bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
         # cpv2 = CrossPropLearnerV2(stepSize, list(dims))
-        bp = DeepBackpropLearner(stepSize, list(dims), outputLayer='bp')
-        cp = DeepBackpropLearner(stepSize, list(dims), outputLayer='cp')
+        # bp = DeepBackpropLearner(stepSize, list(dims), outputLayer='bp')
+        # cp = DeepBackpropLearner(stepSize, list(dims), outputLayer='cp')
         # learners = [bp, cp, cpv2]
         # learners = [bpAdam]
-        learners = [bp, cp]
-        # learners = [cp, bp]
+        # learners = [bp, cp]
+        learners = [cp, bp]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)
@@ -70,7 +70,7 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
                 #     learners[ind].predict(trainX[i, :])
                 #     trainErrors[ind, run, ep] += learners[ind].learn(trainY[i, :])
                 testErrors[ind, run, ep] = test(learners[ind], testX, testY)
-                print('Run', run, labels[ind], 'Epoch', ep, testErrors[ind, run, ep])
+                print('Run', run, labels[ind], 'Epoch', ep, testErrors[ind, run, ep] / 500)
     return [trainErrors, testErrors]
 
 def train(stepSize, learnerFeatures, nSample):
@@ -91,8 +91,8 @@ def train(stepSize, learnerFeatures, nSample):
     args = []
     for i in range(len(startRun)):
         args.append((data, stepSize, learnerFeatures, nSample, startRun[i], endRun[i], trainErrors, testErrors))
-    results = Pool(nThreads).map(trainUnitWrapper, args)
-    # results = [trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors)]
+    # results = Pool(nThreads).map(trainUnitWrapper, args)
+    results = [trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors)]
     for trError, teError in results:
         trainErrors += trError
         testErrors += teError
@@ -112,7 +112,8 @@ learnerFeatures = [100, 500, 900]
 stepSizes = np.power(2., np.arange(-16, -10))
 # for step in stepSizes[: 3]:
 #     train(step, 500, 3500)
-train(stepSizes[0], 500, 3500)
+# train(stepSizes[0], 500, 3500)
+train(0.0001, 500, 3500)
 # train(stepSizes[-1], 500, 3500)
 # train(stepSizes[0], learnerFeatures[0], 1500)
 

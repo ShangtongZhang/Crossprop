@@ -5,8 +5,7 @@
 #######################################################################
 
 from __future__ import print_function
-# import numpy as np
-import minpy.numpy as np
+import numpy as np
 from functools import partial
 from multiprocessing import Pool
 import pickle
@@ -55,7 +54,7 @@ class CrossPropLearner:
 
         phi = np.repeat(phi, self.U.shape[0], 0).reshape((-1, self.U.shape[0], self.U.shape[1]))
         phi = np.matrix(np.mean(phi, axis=0))
-        uDelta = np.multiply(phi, self.H) / self.X.shape[0]
+        uDelta = np.multiply(phi, self.H)
         self.U += self.stepSize * uDelta
 
         hDecay = np.asarray(1 - self.stepSize * np.power(self.phi, 2))
