@@ -15,7 +15,7 @@ from DeepBackpropLearner import *
 from GEOFF import *
 
 # runs = len(data)
-runs = 6
+runs = 1
 epochs = 200
 # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
 labels = ['Backprop', 'Crossprop']
@@ -24,41 +24,51 @@ labels = ['Backprop', 'Crossprop']
 # labels = ['Backprop-RMSProp']
 
 def test(learner, testX, testY):
-    error = 0.0
-    for i in range(testX.shape[0]):
-        error += 0.5 * np.power(learner.predict(testX[i, :]) - testY[i], 2)
+    error = 0.5 * np.sum(np.power(learner.predict(testX) - testY, 2))
     return error
 
 def trainUnitWrapper(args):
    return trainUnit(*args)
 
-def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors):
+def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors, batchSize=1):
     sep = nSample - 500
     for run in range(startRun, endRun):
         X, Y = data[run]
-        trainX = X[: sep]
-        trainY = Y[: sep]
-        testX = X[sep:]
-        testY = Y[sep:]
+        trainX = np.matrix(X[: sep])
+        trainY = np.matrix(Y[: sep]).T
+        testX = np.matrix(X[sep:])
+        testY = np.matrix(Y[sep:]).T
         dims = [20, learnerFeatures, 50]
-        # cp = CrossPropLearner(stepSize, list(dims))
+        # dims = [20, learnerFeatures]
+        # bp = BackpropLearner(stepSize, list(dims), init='normal')
+        # cp = CrossPropLearner(stepSize, list(dims), init='normal')
         # bp = BackpropLearner(stepSize, list(dims))
-        bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
-        cpv2 = CrossPropLearnerV2(stepSize, list(dims))
+        # cp = CrossPropLearner(stepSize, list(dims))
+        # bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
+        # cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         bp = DeepBackpropLearner(stepSize, list(dims), outputLayer='bp')
         cp = DeepBackpropLearner(stepSize, list(dims), outputLayer='cp')
         # learners = [bp, cp, cpv2]
         # learners = [bpAdam]
         learners = [bp, cp]
+        # learners = [cp, bp]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)
             for ep in range(epochs):
-                indices = np.arange(trainX.shape[0])
-                np.random.shuffle(indices)
-                for i in indices:
-                    learners[ind].predict(trainX[i, :])
-                    trainErrors[ind, run, ep] += learners[ind].learn(trainY[i])
+                cur = 0
+                while (cur < trainX.shape[0]):
+                    end = min(cur + batchSize, trainX.shape[0])
+                    learners[ind].predict(trainX[cur: end, :])
+                    trainErrors[ind, run, ep] += learners[ind].learn(trainY[cur: end, :])
+                    cur = end
+                # learners[ind].predict(trainX)
+                # trainErrors[ind, run, ep] += learners[ind].learn(trainY)
+                # indices = np.arange(trainX.shape[0])
+                # np.random.shuffle(indices)
+                # for i in indices:
+                #     learners[ind].predict(trainX[i, :])
+                #     trainErrors[ind, run, ep] += learners[ind].learn(trainY[i, :])
                 testErrors[ind, run, ep] = test(learners[ind], testX, testY)
                 print('Run', run, labels[ind], 'Epoch', ep, testErrors[ind, run, ep])
     return [trainErrors, testErrors]
@@ -82,11 +92,12 @@ def train(stepSize, learnerFeatures, nSample):
     for i in range(len(startRun)):
         args.append((data, stepSize, learnerFeatures, nSample, startRun[i], endRun[i], trainErrors, testErrors))
     results = Pool(nThreads).map(trainUnitWrapper, args)
+    # results = [trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors)]
     for trError, teError in results:
         trainErrors += trError
         testErrors += teError
 
-    fw = open('tmp/deep_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('tmp/batch_'+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': learnerFeatures}, fw)

@@ -5,7 +5,8 @@
 #######################################################################
 
 from __future__ import print_function
-import numpy as np
+# import numpy as np
+import minpy.numpy as np
 from functools import partial
 from multiprocessing import Pool
 import pickle
@@ -60,11 +61,11 @@ class BackpropLearner:
         dims[1] += int(bias[1])
 
         if init == 'orthogonal':
-            self.U = orthogonalInit(dims[0], dims[1])
+            self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
         else:
-            self.U = np.random.randn(dims[0], dims[1])
+            self.U = np.matrix(np.random.randn(dims[0], dims[1]))
 
-        self.W = np.random.randn(dims[1])
+        self.W = np.matrix(np.random.randn(dims[1], 1))
         if activation == 'relu':
             self.act = relu
             self.gradientAct = gradientRelu
@@ -87,25 +88,28 @@ class BackpropLearner:
 
     def predict(self, X=None):
         if X is not None:
-            self.X = X
-        self.net = np.dot(self.X, self.U)
+            self.X = np.matrix(X)
+        self.net = self.X * self.U
         self.phi = self.act(self.net)
         if self.bias[1]:
-            self.phi[-1] = 1
-        self.y = np.dot(self.phi, self.W)
+            self.phi[:, -1] = 1
+        self.y = self.phi * self.W
         return self.y
 
     def getGradient(self, error):
-        gradientW = -error * self.phi
-        errorNet = -error * np.multiply(np.matrix(self.W),
-                                        np.matrix(self.gradientAct(self.phi, self.net)))
+        gradientW = -np.matrix(np.diag(error.flat)) * self.phi
+        gradientW = np.mean(gradientW, axis=0).T
+
+        errorPhi = -error * self.W.T
+        errorNet = np.multiply(errorPhi, self.gradientAct(self.phi, self.net))
         if self.bias[1]:
             errorNet[:, -1] = 0
-        gradientU = np.matrix(self.X).T * errorNet
+        gradientU = self.X.T * errorNet / self.X.shape[0]
+
         if self.asOutput:
-            self.inputGradient = errorNet * np.matrix(self.U).T
+            self.errorInput = errorNet * self.U.T
             if self.bias[0]:
-                self.inputGradient[:, -1] = 0
+                self.errorInput[:, -1] = 0
         return [gradientW, gradientU]
 
     def learn(self, target):
@@ -117,20 +121,20 @@ class BackpropLearner:
         # self.checkGradient()
         self.W -= self.WAdjustor.adjust(self.gradientW)
         self.U -= self.UAdjustor.adjust(self.gradientU)
-        return 0.5 * error * error
+        return 0.5 * np.sum(np.power(error, 2))
 
     def checkGradient(self):
         epsilon = 1e-8
         for i in range(len(self.W)):
-            self.W[i] += epsilon
+            self.W[i, 0] += epsilon
             y1 = self.predict()
             error1 = self.target - y1
-            self.W[i] -= 2 * epsilon
+            self.W[i, 0] -= 2 * epsilon
             y2 = self.predict()
             error2 = self.target - y2
-            self.W[i] += epsilon
+            self.W[i, 0] += epsilon
             g = 0.5 * (error1 * error1 - error2 * error2) / (2 * epsilon)
-            if np.abs(self.gradientW[i] - g) > 0.01:
+            if np.abs(self.gradientW[i, 0] - g) > 0.01:
                 print('W[', i, ']Gradient Error:', g, self.gradientW[i])
 
         for i in range(self.U.shape[0]):
