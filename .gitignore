@@ -5,8 +5,8 @@ partial
 train[0-9]*.py
 train[0-9]*.sh
 .idea
-
-
+*-ubyte
+tmp.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

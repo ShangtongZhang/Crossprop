@@ -45,13 +45,10 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         # bp = BackpropLearner(stepSize, list(dims))
         # cp = CrossPropLearner(stepSize, list(dims))
         # bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
-        # cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         # bp = DeepBackpropLearner(stepSize, list(dims), outputLayer='bp')
         # cp = DeepBackpropLearner(stepSize, list(dims), outputLayer='cp')
-        # learners = [bp, cp, cpv2]
         # learners = [bpAdam]
-        # learners = [bp, cp]
-        learners = [cp, bp]
+        learners = [bp, cp]
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)

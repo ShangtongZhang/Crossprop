@@ -23,12 +23,12 @@ test_x = np.matrix(X[sep:, : -1])
 test_y = np.matrix(Y[sep:]).T
 
 epochs = 200
-batch_size = 1
+batch_size = 100
 learning_rate = 0.0001
 dim_in = 20
 dim_hidden = 500
 
-cp = CrossPropRegression(dim_in, dim_hidden, learning_rate)
+cp = CrossPropRegression(dim_in, dim_hidden, learning_rate, initializer=tf.zeros_initializer())
 with tf.Session() as sess:
     for var in tf.global_variables():
         sess.run(var.initializer)

@@ -24,8 +24,10 @@ class CrossPropLearner:
             self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
         else:
             self.U = np.matrix(np.random.randn(dims[0], dims[1]))
+            # self.U = np.matrix(np.zeros((dims[0], dims[1])))
 
         self.W = np.matrix(np.random.randn(dims[1], 1))
+        # self.W = np.matrix(np.zeros((dims[1], 1)))
         self.H = np.matrix(np.zeros((dims[0], dims[1])))
         if activation == 'relu':
             self.act = relu
@@ -88,49 +90,3 @@ class CrossPropLearner:
         #     if self.bias[0]:
         #         self.inputGradient[:, -1] = 0
         return 0.5 * np.sum(np.power(error, 2))
-
-class CrossPropLearnerV2:
-    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):
-        self.stepSize = stepSize
-        self.bias = bias
-        dims[0] += int(bias[0])
-        dims[1] += int(bias[1])
-
-        if init == 'orthogonal':
-            self.U = orthogonalInit(dims[0], dims[1])
-        else:
-            self.U = np.random.randn(dims[0], dims[1])
-
-        self.W = np.random.randn(dims[1])
-        self.H = np.zeros(dims[1])
-
-        if activation == 'relu':
-            self.act = relu
-            self.gradientAct = gradientRelu
-        elif activation == 'tanh':
-            self.act = tanh
-            self.gradientAct = gradientTanh
-        elif activation == 'sigmoid':
-            self.act = sigmoid
-            self.gradientAct = gradientSigmoid
-
-    def predict(self, X):
-        self.X = X
-        self.net = np.dot(self.X, self.U)
-        self.phi = self.act(self.net)
-        if self.bias[1]:
-            self.phi[-1] = 1
-        self.y = np.dot(self.phi, self.W)
-        return self.y
-
-    def learn(self, target):
-        error = target - self.y
-        self.W += self.stepSize * error * self.phi
-        self.H = self.H * (1 - self.stepSize * np.power(self.phi, 2)) + self.stepSize * error
-        gradientU = np.multiply(np.repeat(np.matrix(self.phi * self.H), self.U.shape[0], 0),
-                                np.dot(np.matrix(self.X).T,
-                                       # np.matrix(1 - np.power(self.phi, 2))))
-                                       np.matrix(self.gradientAct(self.phi, self.net))))
-        self.U += self.stepSize * gradientU
-        return 0.5 * error * error
-
