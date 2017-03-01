@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import pickle
 from TFCrossprop import *
+from TFBackprop import *
 from load_mnist import *
 from CrosspropAlternate import *
 
@@ -15,8 +16,8 @@ train_x, train_y = load_mnist('training')
 test_x, test_y = load_mnist('testing')
 
 epochs = 200
-batch_size = 1
-learning_rate = 0.0001
+batch_size = 100
+learning_rate = 0.01
 dim_in = 28 * 28
 dim_hidden = 1024
 dim_out = 10
@@ -26,15 +27,15 @@ train_y = np.matrix(dense_to_one_hot(train_y))
 test_x = np.matrix(test_x.reshape([-1, dim_in])) / 255.0
 test_y = np.matrix(dense_to_one_hot(test_y))
 
-train_examples = 1000
-test_examples = 100
+train_examples = 10000
+test_examples = 1000
 train_x = train_x[: train_examples, :]
 train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :]
 test_y = test_y[: test_examples, :]
 
-cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate,
-                             gate=Tanh(), initializer=tf.zeros_initializer())
+cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh())
+bp = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh())
 with tf.Session() as sess:
     for var in tf.global_variables():
         sess.run(var.initializer)
@@ -43,9 +44,13 @@ with tf.Session() as sess:
         while cur < train_x.shape[0]:
             end = min(cur + batch_size, train_x.shape[0])
             cp.train(sess, train_x[cur: end, :], train_y[cur: end, :])
+            bp.train(sess, train_x[cur: end, :], train_y[cur: end, :])
             cur = end
-        loss = cp.test(sess, test_x, test_y)
-        print 'epoch', ep, loss
+
+        loss, acc = cp.test(sess, test_x, test_y)
+        print 'cp: epoch', ep, 'loss', loss, 'accuracy', acc
+        loss, acc = bp.test(sess, test_x, test_y)
+        print 'bp: epoch', ep, 'loss', loss, 'accuracy', acc
 
 # input_dim = dim_in + 1
 # output_units = dim_out
@@ -64,9 +69,11 @@ with tf.Session() as sess:
 #         true_label_encoded = np.zeros((output_units, 1))
 #         true_label_encoded[np.argmax(train_y[example_i, :])] = 1
 #         cp_estimate = cp.make_estimate()
+#         # print cp_estimate.T
 #         cp.crosspropagate_errors(true_label_encoded)
 #
 #     cp_error = 0.0
+#     acc = 0.0
 #     testing_indices = np.arange(test_examples)
 #     for ex_i in testing_indices:
 #         tx = np.concatenate((test_x[ex_i, :].flatten(), [1]))
@@ -75,8 +82,11 @@ with tf.Session() as sess:
 #         true_label_encoded = np.zeros((output_units, 1))
 #         true_label_encoded[np.argmax(train_y[ex_i, :])] = 1
 #         cp_estimate = cp.make_estimate()
+#         if np.argmax(true_label_encoded) == np.argmax(cp_estimate):
+#             acc += 1
 #         cp_error += -np.sum(np.multiply(np.log(cp_estimate), true_label_encoded))
 #     cp_error /= test_examples
-#     print 'epoch', ep,  cp_error
+#     acc /= test_examples
+#     print 'epoch', ep,  cp_error, acc
 
 

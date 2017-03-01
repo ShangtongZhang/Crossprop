@@ -10,41 +10,8 @@ from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import nn_ops
+from TFCommon import *
 
-def crossprop_layer(name, var_in, dim_in, dim_hidden, dim_out, gate_fun, initializer, reuse=False):
-    with variable_scope.variable_scope(name, reuse=False):
-        if reuse:
-            U = variable_scope.get_variable('U', [dim_in, dim_hidden])
-            b_hidden = variable_scope.get_variable('b_hidden', [dim_hidden])
-            W = variable_scope.get_variable('W', [dim_hidden, dim_out])
-            b_out = variable_scope.get_variable('b_out', [dim_out])
-        else:
-            U = variable_scope.get_variable('U', [dim_in, dim_hidden],
-                                            initializer=initializer)
-            b_hidden = variable_scope.get_variable('b_hidden', [dim_hidden],
-                                                   initializer=initializer)
-            W = variable_scope.get_variable('W', [dim_hidden, dim_out],
-                                            initializer=initializer)
-            b_out = variable_scope.get_variable('b_out', [dim_out],
-                                                initializer=initializer)
-        net = math_ops.matmul(var_in, U)
-        net = nn_ops.bias_add(net, b_hidden)
-        phi = gate_fun(net)
-        y = math_ops.matmul(phi, W)
-        y = nn_ops.bias_add(y, b_out)
-        return U, b_hidden, net, phi, W, b_out, y
-
-class Relu:
-    def __init__(self):
-        self.gate_fun = nn_ops.relu
-        self.gate_fun_gradient = \
-            lambda phi, net: tf.where(net >= 0, tf.ones(tf.shape(net)), tf.zeros(tf.shape(net)))
-
-class Tanh:
-    def __init__(self):
-        self.gate_fun = tf.tanh
-        self.gate_fun_gradient = \
-            lambda phi, net: tf.subtract(1.0, tf.pow(phi, 2))
 
 class CrossPropRegression:
     def __init__(self, dim_in, dim_hidden, learning_rate, gate=Relu(),
@@ -63,7 +30,7 @@ class CrossPropRegression:
         delta = tf.subtract(self.target, y)
         self.loss = tf.scalar_mul(0.5, tf.reduce_mean(tf.pow(delta, 2)))
 
-        u_mom_decay = tf.subtract(1.0, -tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
+        u_mom_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
         u_mom_decay = tf.reshape(tf.tile(u_mom_decay, [1, tf.shape(U)[0]]), [-1, tf.shape(U)[0], tf.shape(U)[1]])
         self.u_mom_decay = tf.reduce_mean(u_mom_decay, axis=0)
 
@@ -71,7 +38,7 @@ class CrossPropRegression:
         self.u_mom_delta = tf.matmul(u_mom_delta, gate.gate_fun_gradient(phi, net))
         self.u_mom_delta = tf.scalar_mul(1.0 / tf.cast(tf.shape(self.x)[0], tf.float32), self.u_mom_delta)
 
-        b_hidden_mom_decay = tf.subtract(1.0, -tf.scalar_mul(self.learning_rate, tf.pow(phi, 2)))
+        b_hidden_mom_decay = tf.subtract(1.0, tf.scalar_mul(self.learning_rate, tf.pow(phi, 2)))
         self.b_hidden_mom_decay = tf.reduce_mean(b_hidden_mom_decay, axis=0)
 
         b_hidden_mom_delta = tf.matmul(tf.transpose(delta), gate.gate_fun_gradient(phi, net))
@@ -127,16 +94,14 @@ class CrossPropClassification:
 
         U, b_hidden, net, phi, W, b_out, y =\
             crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
-        max_y = tf.reduce_max(y, axis=1, keep_dims=True)
-        y = tf.subtract(y, max_y)
-        exp_y = tf.exp(y)
-        den_y = tf.reduce_sum(exp_y, axis=1, keep_dims=True)
-        y = tf.multiply(exp_y, 1.0 / den_y)
-        self.loss = -tf.reduce_mean(tf.reduce_sum(
-            tf.multiply(tf.log(y), self.target), axis=1))
-        delta = tf.subtract(self.target, y)
+        self.pred = tf.nn.softmax(y)
+        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
+        correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+        delta = tf.subtract(self.target, self.pred)
 
-        h_decay = tf.subtract(1.0, -tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
+
+        h_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
         h_decay = tf.reshape(tf.tile(h_decay, [1, tf.shape(self.h)[1]]), [-1, tf.shape(self.h)[1], tf.shape(self.h)[0]])
         h_decay = tf.transpose(h_decay, [0, 2, 1])
         self.h_decay = tf.reduce_mean(h_decay, axis=0)
@@ -166,17 +131,18 @@ class CrossPropClassification:
         self.h_var = np.zeros((dim_hidden, dim_out))
 
     def train(self, sess, train_x, train_y):
-        _, self.h_var, self.h_decay_var, self.h_delta_var = \
-            sess.run([self.train_op, self.h, self.h_decay, self.h_delta],
+        _, loss, accuracy, h_decay_var, h_delta_var, pred = \
+            sess.run([self.train_op, self.loss, self.accuracy, self.h_decay, self.h_delta, self.pred],
                      feed_dict={
                          self.x: train_x,
                          self.target: train_y,
                          self.h: self.h_var
                      })
-        self.h_var = np.multiply(self.h_decay_var, self.h_var) + self.learning_rate * self.h_delta_var
+        self.h_var = np.multiply(h_decay_var, self.h_var) + self.learning_rate * h_delta_var
+        return loss, accuracy
 
     def test(self, sess, test_x, test_y):
-        return sess.run(self.loss, feed_dict={
+        return sess.run([self.loss, self.accuracy], feed_dict={
             self.x: test_x,
             self.target: test_y
         })

@@ -12,13 +12,13 @@ class Crossprop_Alternate():
 		self.lmbda = lmbda
 
 		# init the weights
-		# self.hidden_output_weights = np.random.normal(0.0, 1.0,
-		# 											  size=(self.hidden_dim, self.output_dim))
-		# self.input_hidden_weights = np.random.normal(0.0, 1.0,
-		# 											  size=(self.input_dim, self.hidden_dim - 1))
+		self.hidden_output_weights = np.random.normal(0.0, 1.0,
+													  size=(self.hidden_dim, self.output_dim))
+		self.input_hidden_weights = np.random.normal(0.0, 1.0,
+													  size=(self.input_dim, self.hidden_dim - 1))
 
-		self.hidden_output_weights = np.zeros((self.hidden_dim, self.output_dim))
-		self.input_hidden_weights = np.zeros((self.input_dim, self.hidden_dim - 1))
+		# self.hidden_output_weights = np.zeros((self.hidden_dim, self.output_dim))
+		# self.input_hidden_weights = np.zeros((self.input_dim, self.hidden_dim - 1))
 		# self.input_hidden_weights, _, _ = np.linalg.svd(np.random.random((self.input_dim, self.hidden_dim - 1)),
 		# 												full_matrices=False)
 		# _, _, self.hidden_output_weights = np.linalg.svd(np.random.random((self.hidden_dim, self.output_dim)),
