@@ -90,3 +90,66 @@ class CrossPropLearner:
         #     if self.bias[0]:
         #         self.inputGradient[:, -1] = 0
         return 0.5 * np.sum(np.power(error, 2))
+
+class CrossPropLearnerAlt:
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', asOutput=False):
+        self.stepSize = stepSize
+        self.asOutput = asOutput
+        self.bias = bias
+        dims[0] += int(bias[0])
+        dims[1] += int(bias[1])
+        dims.append(1)
+        # dims[2] = 1
+
+        if init == 'orthogonal':
+            self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
+        else:
+            self.U = np.matrix(np.random.randn(dims[0], dims[1]))
+
+        self.W = np.matrix(np.random.randn(dims[1], dims[2]))
+        self.H = np.matrix(np.zeros((dims[1], dims[2])))
+        if activation == 'relu':
+            self.act = relu
+            self.gradientAct = gradientRelu
+        elif activation == 'tanh':
+            self.act = tanh
+            self.gradientAct = gradientTanh
+        elif activation == 'sigmoid':
+            self.act = sigmoid
+            self.gradientAct = gradientSigmoid
+
+    def predict(self, X):
+        self.X = np.matrix(X)
+        self.net = self.X * self.U
+        self.phi = self.act(self.net)
+        if self.bias[1]:
+            self.phi[:, -1] = 1
+        self.y = self.phi * self.W
+        return self.y
+
+    def learn(self, target):
+        error = self.y - target
+
+        gradientW = self.phi.T * error
+        phi_phi_grad = np.multiply(self.phi, self.gradientAct(self.phi, self.net))
+        phi_phi_grad = np.multiply(phi_phi_grad, (self.H * error.T).T)
+        phi_phi_grad[:, -1] = 0
+        gradientU = self.X.T * phi_phi_grad
+
+        h_decay = 1 - self.stepSize * np.power(self.phi, 2)
+        h_decay = np.repeat(h_decay, self.H.shape[1], 0).T
+
+        h_gradient = np.repeat(error, self.H.shape[0], 0)
+
+        self.W -= self.stepSize * gradientW
+        self.U -= self.stepSize * gradientU
+        self.H = np.multiply(h_decay, self.H) - self.stepSize * h_gradient
+
+        if self.asOutput:
+            errorPhi = error * self.W.T
+            errorNet = np.multiply(errorPhi, self.gradientAct(self.phi, self.net))
+            if self.bias[1]:
+                errorNet[:, -1] = 0
+            self.errorInput = errorNet
+
+        return 0.5 * np.sum(np.power(error, 2))

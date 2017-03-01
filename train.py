@@ -12,6 +12,7 @@ import pickle
 from CrosspropLearner import *
 from BackpropLearner import *
 from DeepBackpropLearner import *
+from DeepCrosspropLearner import *
 from GEOFF import *
 
 # runs = len(data)
@@ -30,7 +31,7 @@ def test(learner, testX, testY):
 def trainUnitWrapper(args):
    return trainUnit(*args)
 
-def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors, batchSize=100):
+def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors, batchSize=1):
     sep = nSample - 500
     for run in range(startRun, endRun):
         X, Y = data[run]
@@ -38,8 +39,8 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         trainY = np.matrix(Y[: sep]).T
         testX = np.matrix(X[sep:])
         testY = np.matrix(Y[sep:]).T
-        # dims = [20, learnerFeatures, 50]
-        dims = [20, learnerFeatures]
+        dims = [20, learnerFeatures, 50]
+        # dims = [20, learnerFeatures]
         bp = BackpropLearner(stepSize, list(dims), init='normal')
         cp = CrossPropLearner(stepSize, list(dims), init='normal')
         # bp = BackpropLearner(stepSize, list(dims))
@@ -47,8 +48,10 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         # bpAdam = BackpropLearner(stepSize, list(dims), init='normal', gradient='RMSProp')
         # bp = DeepBackpropLearner(stepSize, list(dims), outputLayer='bp')
         # cp = DeepBackpropLearner(stepSize, list(dims), outputLayer='cp')
-        # learners = [bpAdam]
-        learners = [bp, cp]
+        dcp = DeepCrosspropLearner(stepSize, list(dims), activation='tanh')
+        learners = [dcp]
+        # learners = [bp, cp
+
 
         for ind in range(len(labels)):
             print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)

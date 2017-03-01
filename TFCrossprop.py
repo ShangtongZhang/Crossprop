@@ -111,9 +111,7 @@ class CrossPropClassification:
 
         new_grads = []
         phi_phi_grad = tf.multiply(phi, gate.gate_fun_gradient(phi, net))
-        weight = tf.reshape(tf.tile(delta, [1, tf.shape(self.h)[0]]), [-1, tf.shape(self.h)[0], tf.shape(self.h)[1]])
-        weight = tf.multiply(weight, tf.reshape(tf.tile(self.h, [tf.shape(self.x)[0], 1]), [-1, tf.shape(self.h)[0], tf.shape(self.h)[1]]))
-        weight = tf.reduce_sum(weight, axis=2)
+        weight = tf.transpose(tf.matmul(self.h, tf.transpose(delta)))
         phi_phi_grad = tf.multiply(phi_phi_grad, weight)
         new_u_grad = tf.matmul(tf.transpose(self.x), phi_phi_grad)
         new_u_grad = tf.scalar_mul(1.0 / tf.cast(tf.shape(self.x)[0], tf.float32), new_u_grad)
