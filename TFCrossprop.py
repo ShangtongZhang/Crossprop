@@ -27,7 +27,7 @@ class CrossPropRegression:
 
         U, b_hidden, net, phi, W, b_out, y =\
             crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
-        delta = tf.subtract(self.target, y)
+        delta = tf.subtract(y, self.target)
         self.loss = tf.scalar_mul(0.5, tf.reduce_mean(tf.pow(delta, 2)))
 
         u_mom_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
@@ -71,8 +71,8 @@ class CrossPropRegression:
                          self.u_mom: self.u_mom_var,
                          self.b_hidden_mom: self.b_hidden_mom_var
                      })
-        self.u_mom_var = np.multiply(self.u_mom_decay_var, self.u_mom_var) + self.learning_rate * self.u_mom_delta_var
-        self.b_hidden_mom_var = np.multiply(self.b_hidden_mom_decay_var, self.b_hidden_mom_var) + \
+        self.u_mom_var = np.multiply(self.u_mom_decay_var, self.u_mom_var) - self.learning_rate * self.u_mom_delta_var
+        self.b_hidden_mom_var = np.multiply(self.b_hidden_mom_decay_var, self.b_hidden_mom_var) - \
                            self.learning_rate * self.b_hidden_mom_delta_var
 
     def test(self, sess, test_x, test_y):
@@ -98,7 +98,7 @@ class CrossPropClassification:
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
         correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        delta = tf.subtract(self.target, self.pred)
+        delta = tf.subtract(self.pred, self.target)
 
 
         h_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
@@ -136,7 +136,7 @@ class CrossPropClassification:
                          self.target: train_y,
                          self.h: self.h_var
                      })
-        self.h_var = np.multiply(h_decay_var, self.h_var) + self.learning_rate * h_delta_var
+        self.h_var = np.multiply(h_decay_var, self.h_var) - self.learning_rate * h_delta_var
         return loss, accuracy
 
     def test(self, sess, test_x, test_y):

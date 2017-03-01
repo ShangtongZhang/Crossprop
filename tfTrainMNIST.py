@@ -33,7 +33,8 @@ train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :]
 test_y = test_y[: test_examples, :]
 
-lables = ['cp', 'bp']
+# lables = ['cp', 'bp']
+lables = ['cp']
 initialzer = tf.random_normal_initializer()
 cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
 bp = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
