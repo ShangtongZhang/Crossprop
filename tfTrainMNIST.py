@@ -4,9 +4,10 @@
 # declaration at the top                                              #
 #######################################################################
 
+# import pickle
 import numpy as np
 import tensorflow as tf
-import pickle
+from tqdm import tqdm
 from TFCrossprop import *
 from TFBackprop import *
 from load_mnist import *
@@ -15,7 +16,7 @@ from CrosspropAlternate import *
 train_x, train_y = load_mnist('training')
 test_x, test_y = load_mnist('testing')
 
-epochs = 200
+epochs = 1 #200
 batch_size = 1
 learning_rate = 0.0001
 dim_in = 28 * 28

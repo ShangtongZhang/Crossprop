@@ -12,7 +12,6 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import nn_ops
 from TFCommon import *
 
-
 class CrossPropRegression:
     def __init__(self, dim_in, dim_hidden, learning_rate, gate=Relu(),
                  initializer=tf.random_normal_initializer()):
