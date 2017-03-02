@@ -84,7 +84,7 @@ class Crossprop_Alternate():
 		# hidden_output_weights_delta = hidden_dim x 1
 		# input_hidden_weights_delta = input_dim x hidden_dim
 		delta = self.get_softmax_grad(true_label)
-		hidden_output_weights_delta = -1.0 * np.dot(self.features, delta.transpose())
+		hidden_output_weights_delta = np.dot(self.features, delta.transpose())
 
 		input_hidden_weights_interim = np.zeros((self.hidden_dim - 1, 1))
 		for i in range(self.output_dim):
@@ -93,9 +93,9 @@ class Crossprop_Alternate():
 			input_hidden_weights_interim[0 : self.hidden_dim - 1, 0] += (delta[i] * (self.features[0: self.hidden_dim - 1].flatten() * self.input_hidden_traces[:, i]))
 			self.input_hidden_traces[:, i] = self.input_hidden_traces[:, i] * (1.0 - self.beta_step_size * (self.features[0 : self.hidden_dim - 1].flatten() ** 2)) +\
 											 (self.beta_step_size * delta[i])
-		input_hidden_weights_delta = -1.0 * np.dot(self.input_vector,
+		input_hidden_weights_delta = np.dot(self.input_vector,
 												   (input_hidden_weights_interim * self.get_nonlinearity_derivative()[0 : self.hidden_dim - 1, :]).transpose())
 
-		self.input_hidden_weights = self.input_hidden_weights + (self.beta_step_size * input_hidden_weights_delta)
-		self.hidden_output_weights = self.hidden_output_weights + (self.alpha_step_size * hidden_output_weights_delta)
+		self.input_hidden_weights = self.input_hidden_weights - (self.beta_step_size * input_hidden_weights_delta)
+		self.hidden_output_weights = self.hidden_output_weights - (self.alpha_step_size * hidden_output_weights_delta)
 		return
