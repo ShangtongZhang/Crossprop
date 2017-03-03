@@ -83,23 +83,31 @@ class CrossPropRegression:
 
 class CrossPropClassification:
     def __init__(self, dim_in, dim_hidden, dim_out, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer()):
+                 initializer=tf.random_normal_initializer(), bottom_layer=None):
         self.learning_rate = learning_rate
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
-        self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
+        if bottom_layer is None:
+            self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
+            var_in = self.x
+            trainable_vars = []
+        else:
+            self.x = bottom_layer.x
+            var_in = bottom_layer.var_out
+            trainable_vars = bottom_layer.trainable_vars
+
         self.h = tf.placeholder(tf.float32, shape=(dim_hidden, dim_out))
 
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
 
         U, b_hidden, net, phi, W, b_out, y =\
-            crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
+            crossprop_layer('crossprop_layer', var_in, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
         self.pred = tf.nn.softmax(y)
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
         correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
         delta = tf.subtract(self.pred, self.target)
-
+        trainable_vars.extend([W, b_out])
 
         h_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
         h_decay = tf.reshape(tf.tile(h_decay, [1, tf.shape(self.h)[1]]), [-1, tf.shape(self.h)[1], tf.shape(self.h)[0]])
@@ -113,8 +121,8 @@ class CrossPropClassification:
         phi_phi_grad = tf.multiply(phi, gate.gate_fun_gradient(phi, net))
         weight = tf.transpose(tf.matmul(self.h, tf.transpose(delta)))
         phi_phi_grad = tf.multiply(phi_phi_grad, weight)
-        new_u_grad = tf.matmul(tf.transpose(self.x), phi_phi_grad)
-        new_u_grad = tf.scalar_mul(1.0 / tf.cast(tf.shape(self.x)[0], tf.float32), new_u_grad)
+        new_u_grad = tf.matmul(tf.transpose(var_in), phi_phi_grad)
+        new_u_grad = tf.scalar_mul(1.0 / tf.cast(tf.shape(var_in)[0], tf.float32), new_u_grad)
         new_grads.append(new_u_grad)
 
         new_b_hidden_grad = tf.reduce_mean(phi_phi_grad, axis=0)
@@ -123,7 +131,7 @@ class CrossPropClassification:
         old_grads = optimizer.compute_gradients(self.loss, var_list=[U, b_hidden])
         for i, (grad, var) in enumerate(old_grads):
             old_grads[i] = (new_grads[i], var)
-        other_grads = optimizer.compute_gradients(self.loss, var_list=[W, b_out])
+        other_grads = optimizer.compute_gradients(self.loss, var_list=trainable_vars)
         self.train_op = optimizer.apply_gradients(old_grads + other_grads)
 
         self.h_var = np.zeros((dim_hidden, dim_out))

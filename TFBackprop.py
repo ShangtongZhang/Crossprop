@@ -34,11 +34,17 @@ class BackPropRegression:
 
 class BackPropClissification:
     def __init__(self, dim_in, dim_hidden, dim_out, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer()):
-        self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
+                 initializer=tf.random_normal_initializer(), bottom_layer=None):
+        if bottom_layer is None:
+            self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
+            var_in = self.x
+        else:
+            self.x = bottom_layer.x
+            var_in = bottom_layer.var_out
+
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
         _, __, ___, phi = \
-            fully_connected('fully_connected_layer1', self.x, dim_in, dim_hidden, initializer, gate.gate_fun)
+            fully_connected('fully_connected_layer1', var_in, dim_in, dim_hidden, initializer, gate.gate_fun)
         _, __, ___, y = \
             fully_connected('fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
         self.pred = tf.nn.softmax(y)
