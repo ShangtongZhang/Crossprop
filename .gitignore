@@ -8,7 +8,8 @@ train[0-9]*.sh
 *-ubyte
 tmp.py
 tfTrainMNISTSingle.py
-
+*.txt
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
