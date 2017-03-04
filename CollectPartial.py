@@ -12,14 +12,14 @@ import os
 def collect(stride, units, stepSize, nSample):
     # labels = ['Backprop', 'Crossprop', 'CrosspropV2']
     # labels = ['Backprop', 'Crossprop']
-    labels = ['BP-Adam']
-    # labels = ['BP-RMS']
+    # labels = ['BP-Adam']
+    labels = ['BP-RMS']
     epochs = 200
     runs = 30
     trainErrors = np.zeros((len(labels), runs, epochs))
     testErrors = np.zeros(trainErrors.shape)
     for startRun in range(0, runs, stride):
-        path = 'partial/YAD_adam_partial_'+str(startRun)+'_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
+        path = 'partial/YAD_RMS_partial_'+str(startRun)+'_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
         if not os.path.isfile(path):
             print(path)
             return
@@ -30,7 +30,7 @@ def collect(stride, units, stepSize, nSample):
         trainErrors += trErrors
         testErrors += teErrors
 
-    fw = open('partial/YAD_adam_total_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('partial/YAD_RMS_total_'+str(units)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'stepSize': stepSize,
                  'learnerFeatures': units}, fw)
@@ -38,19 +38,20 @@ def collect(stride, units, stepSize, nSample):
 
 # stepSizes = [0.00005, 0.0001, 0.0005]
 # stepSizes = np.power(2., np.arange(-16, -7))
-stepSizes = np.power(2., np.arange(-16, -10))
+# stepSizes = np.power(2., np.arange(-16, -10))
+# stepSizes = np.power(2., np.arange(-17, -11))
 # stepSizes = np.power(2., np.arange(-17, -11))
 # stepSizes = np.power(2., np.arange(-11, -5))
-# stepSizes = np.power(2., np.arange(-17, -10))
+stepSizes = np.power(2., np.arange(-17, -10))
 # stepSizes = [0.001]
 # units = [100, 300, 500, 700, 900]
 # units = [300, 700]
 # units = [100, 500, 900]
 
 # units = [100, 500]
-units = [200]
-samples = [13500, 18500, 23500, 40500]
-# samples = [3500, 6500, 9500]
+units = [60]
+# samples = [13500, 18500, 23500, 40500]
+samples = [3500, 6500, 9500]
 # samples = [3500, 6500, 15500, 24500]
 for step in stepSizes:
     for unit in units:

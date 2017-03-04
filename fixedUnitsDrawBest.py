@@ -10,9 +10,7 @@ import matplotlib.pyplot as plt
 import os
 
 def getData(hiddenUnits, stepSize, nSample, prefix):
-    # path = 'data/relu_total_offline_'+str(hiddenUnits)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
     path = 'data/'+prefix+str(hiddenUnits)+'_'+str(stepSize)+'_'+str(nSample)+'.bin'
-    # path = 'data/new_offline_'+str(hiddenUnits)+'_'+str(stepSize)+'.bin'
     if not os.path.isfile(path):
         return None
     fr = open(path, 'rb')
@@ -20,26 +18,39 @@ def getData(hiddenUnits, stepSize, nSample, prefix):
     fr.close()
     return data['errors']
 
-# units = [100, 300, 500, 700, 900, 1100]
-units = [100, 500, 900]
-# units = [100, 500]
 # units = [60]
-# units = [100, 300, 500, 700, 900]
-# stepSizes = [0.00005, 0.0001, 0.0005, 0.001]
-stepSizes = np.power(2., np.arange(-16, -10))
+# # relu, orthogonal
 # stepSizes = np.power(2., np.arange(-17, -5))
+# samples = [3500, 6500, 9500]
+# dataPrefix = 'YAD_total_'
+# dataPrefixAdam = 'YAD_adam_total_'
+# dataPrefixRMS = 'YAD_RMS_total_'
+# tag = 'YAD_test_'
+# yLim = [0, 1]
+
+# units = [200]
+# # relu, orthogonal
 # stepSizes = np.power(2., np.arange(-17, -10))
-# stepSizes = np.power(2., np.arange(-16, -7))
-# stepSizes = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]
-# stepSizes = [0]
+# samples = [13500, 18500, 23500, 40500]
+# dataPrefix = 'YAD_total_'
+# dataPrefixAdam = 'YAD_adam_total_'
+# dataPrefixRMS = 'YAD_RMS_total_'
+# tag = 'YAD_test_'
+# yLim = [0, 1]
+
+units = [100, 500, 900]
+# relu, normal
+stepSizes = np.power(2., np.arange(-16, -10))
+samples = [3500, 6500, 15500, 24500]
+dataPrefix = 'relu_total_offline_'
+dataPrefixAdam = 'adam_total_'
+dataPrefixRMS = 'RMS_total_'
+tag = 'GEOFF_test_'
+yLim = [15, 50]
 
 labels = ['Backprop', 'Crossprop', 'Backprop-Adam', 'Backprop-RMSProp']
-# epochs = 1000
 epochs = 200
 runs = 30
-samples = [3500, 6500, 15500, 24500]
-# samples = [3500, 6500, 9500]
-# samples = [23500]
 
 for nSample in samples:
     nTestExamples = 500
@@ -52,12 +63,11 @@ for nSample in samples:
         for stepInd, step in enumerate(stepSizes):
             # data = getData(unit, step, nSample, 'relu_total_offline_')
             # data2 = getData(unit, step, nSample, 'adam_total_')
-            data = getData(unit, step, nSample, 'relu_total_offline_')
-            data2 = getData(unit, step, nSample, 'adam_total_')
-            data3 = getData(unit, step, nSample, 'RMS_total_')
+            data = getData(unit, step, nSample, dataPrefix)
+            data2 = getData(unit, step, nSample, dataPrefixAdam)
+            data3 = getData(unit, step, nSample, dataPrefixRMS)
             extraData = [data2, data3]
             if data is not None:
-            # if data is not None and data2 is not None:
                 trainErrors, testErrors = data
                 for eData in extraData:
                     if eData is not None:
@@ -96,11 +106,8 @@ for nSample in samples:
         diff = str(asymptoticError[1][0] - asymptoticError[0][0])
         plt.xlabel('Sweep')
         plt.ylabel('Average MSE')
-        plt.ylim([0, 150])
-        plt.title('relu_'+str(unit)+'_'+str(nTrainExamples)+'_'+diff)
+        plt.ylim(yLim)
+        plt.title(tag+str(unit)+'_'+str(nTrainExamples)+'_'+diff)
         plt.legend()
-        # plt.savefig('figure/tanh_test_' + str(unit)+ '.png')
-        # plt.savefig('figure/tanh_train_' + str(unit)+ '.png')
-        # plt.savefig('figure/relu_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
-        plt.savefig('figure/GEOFF_test_'+str(unit)+'_'+str(nTrainExamples)+'.png')
+        plt.savefig('figure/'+tag+str(unit)+'_'+str(nTrainExamples)+'.png')
         plt.close()
