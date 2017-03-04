@@ -56,10 +56,8 @@ def trainUnit(stepSize, hiddenUnits, nSample, startRun, endRun, trainErrors, tes
         cp = CrossPropLearner(stepSize, list(dims))
         bp = BackpropLearner(stepSize, list(dims))
         bpAdam = BackpropLearner(stepSize, list(dims), gradient='adam')
-        cpv2 = CrossPropLearnerV2(stepSize, list(dims))
         # learners = [bp, cp, cpv2]
         # learners = [bp, cp]
-        # learners = [cpv2]
         learners = [bpAdam]
 
         for ind in range(len(labels)):
