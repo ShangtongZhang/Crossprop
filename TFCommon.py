@@ -55,7 +55,7 @@ def crossprop_layer(name, var_in, dim_in, dim_hidden, dim_out, gate_fun, initial
 
 
 def convolution_2d(name, label, var_in, f, dim_in, dim_out,
-                   initializer, transfer, reuse=False):
+                   initializer, transfer, reuse=False, stride=1):
     """Standard convolutional layer"""
     with variable_scope.variable_scope(name, reuse=reuse):
         with variable_scope.variable_scope(label, reuse=reuse):
@@ -67,7 +67,7 @@ def convolution_2d(name, label, var_in, f, dim_in, dim_out,
                                                 initializer=initializer)
                 b = variable_scope.get_variable("b", [dim_out],
                                                 initializer=initializer)
-    z_hat = nn_ops.conv2d(var_in, W, strides=[1, 1, 1, 1], padding="SAME")
+    z_hat = nn_ops.conv2d(var_in, W, strides=[1, stride, stride, 1], padding="SAME")
     z_hat = nn_ops.bias_add(z_hat, b)
     y_hat = transfer(z_hat)
     return W, b, z_hat, y_hat

@@ -17,5 +17,5 @@ export PYTHONPATH=$PWD
 echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
-python tfTrainGEOFF.py
+python tfTrainCIFAR10.py
 echo "Job finished with exit code $? at: `date`"

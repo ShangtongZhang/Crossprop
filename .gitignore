@@ -9,7 +9,7 @@ train[0-9]*.sh
 tmp.py
 tfTrainMNISTSingle.py
 upload.py
-
+cifar10
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
