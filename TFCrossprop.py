@@ -15,10 +15,11 @@ from TFCommon import *
 
 class CrossPropRegression:
     def __init__(self, dim_in, dim_hidden, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer()):
+                 initializer=tf.random_normal_initializer(), optimizer=None):
         dim_out = 1
         self.learning_rate = learning_rate
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
+        if optimizer is None:
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
         self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
         self.u_mom = tf.placeholder(tf.float32, shape=(dim_in, dim_hidden))
@@ -26,7 +27,7 @@ class CrossPropRegression:
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
 
         U, b_hidden, net, phi, W, b_out, y =\
-            crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
+            crossprop_layer('crossprop', 'crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
         delta = tf.subtract(y, self.target)
         self.loss = tf.scalar_mul(0.5, tf.reduce_mean(tf.pow(delta, 2)))
 
@@ -57,7 +58,8 @@ class CrossPropRegression:
         for i, (grad, var) in enumerate(old_grads):
             old_grads[i] = (new_grads[i], var)
         other_grads = optimizer.compute_gradients(self.loss, var_list=[W, b_out])
-        self.train_op = optimizer.apply_gradients(old_grads + other_grads)
+        self.all_gradients = old_grads + other_grads
+        self.train_op = optimizer.apply_gradients(self.all_gradients)
 
         self.u_mom_var = np.zeros((dim_in, dim_hidden))
         self.b_hidden_mom_var = np.zeros(dim_hidden)
@@ -83,9 +85,10 @@ class CrossPropRegression:
 
 class CrossPropClassification:
     def __init__(self, dim_in, dim_hidden, dim_out, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer(), bottom_layer=None):
+                 initializer=tf.random_normal_initializer(), bottom_layer=None, optimizer=None):
         self.learning_rate = learning_rate
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
+        if optimizer is None:
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
         if bottom_layer is None:
             self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
@@ -101,21 +104,23 @@ class CrossPropClassification:
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
 
         U, b_hidden, net, phi, W, b_out, y =\
-            crossprop_layer('crossprop_layer', var_in, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
+            crossprop_layer('crossprop', 'crossprop_layer', var_in, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
         self.pred = tf.nn.softmax(y)
-        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
+        ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target)
+        self.loss = tf.reduce_mean(ce_loss)
+        self.total_loss = tf.reduce_sum(ce_loss)
         correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+        self.correct_labels = tf.reduce_sum(tf.cast(correct_prediction, "float"))
         delta = tf.subtract(self.pred, self.target)
         trainable_vars.extend([W, b_out])
 
         h_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
         h_decay = tf.reshape(tf.tile(h_decay, [1, tf.shape(self.h)[1]]), [-1, tf.shape(self.h)[1], tf.shape(self.h)[0]])
         h_decay = tf.transpose(h_decay, [0, 2, 1])
-        self.h_decay = tf.reduce_mean(h_decay, axis=0)
+        self.h_decay = tf.reduce_sum(h_decay, axis=0)
 
         h_delta = tf.reshape(tf.tile(delta, [1, tf.shape(self.h)[0]]), [-1, tf.shape(self.h)[0], tf.shape(self.h)[1]])
-        self.h_delta = tf.reduce_mean(h_delta, axis=0)
+        self.h_delta = tf.reduce_sum(h_delta, axis=0)
 
         new_grads = []
         phi_phi_grad = tf.multiply(phi, gate.gate_fun_gradient(phi, net))
@@ -132,23 +137,26 @@ class CrossPropClassification:
         for i, (grad, var) in enumerate(old_grads):
             old_grads[i] = (new_grads[i], var)
         other_grads = optimizer.compute_gradients(self.loss, var_list=trainable_vars)
-        self.train_op = optimizer.apply_gradients(old_grads + other_grads)
 
+        self.all_gradients = old_grads + other_grads
+        self.train_op = optimizer.apply_gradients(self.all_gradients)
         self.h_var = np.zeros((dim_hidden, dim_out))
+        self.other_info = [self.total_loss, self.correct_labels, self.h_decay, self.h_delta]
 
     def train(self, sess, train_x, train_y):
-        _, loss, accuracy, h_decay_var, h_delta_var, pred = \
-            sess.run([self.train_op, self.loss, self.accuracy, self.h_decay, self.h_delta, self.pred],
+        _, total_loss, correct_labels, h_decay_var, h_delta_var = \
+            sess.run([self.train_op, self.total_loss, self.correct_labels, self.h_decay, self.h_delta],
                      feed_dict={
                          self.x: train_x,
                          self.target: train_y,
                          self.h: self.h_var
                      })
-        self.h_var = np.multiply(h_decay_var, self.h_var) - self.learning_rate * h_delta_var
-        return loss, accuracy
+        batch_size = float(train_x.shape[0])
+        self.h_var = np.multiply(h_decay_var / batch_size, self.h_var) - self.learning_rate * h_delta_var / batch_size
+        return total_loss, correct_labels
 
     def test(self, sess, test_x, test_y):
-        return sess.run([self.loss, self.accuracy], feed_dict={
+        return sess.run([self.total_loss, self.correct_labels], feed_dict={
             self.x: test_x,
             self.target: test_y
         })

@@ -6,24 +6,23 @@
 
 import tensorflow as tf
 import numpy as np
-from tensorflow.python.ops import variable_scope
-from tensorflow.python.ops import math_ops
-from tensorflow.python.ops import array_ops
-from tensorflow.python.ops import nn_ops
 from TFCommon import *
 
 class BackPropRegression:
     def __init__(self, dim_in, dim_hidden, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer()):
+                 initializer=tf.random_normal_initializer(), optimizer=None):
         dim_out = 1
+        if optimizer is None:
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate)
         self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
         _, __, ___, phi = \
-            fully_connected('fully_connected_layer1', self.x, dim_in, dim_hidden, initializer, gate.gate_fun)
+            fully_connected('backprop', 'fully_connected_layer1', self.x, dim_in, dim_hidden, initializer, gate.gate_fun)
         _, __, ___, y = \
-            fully_connected('fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
+            fully_connected('backprop', 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
         self.loss = tf.scalar_mul(0.5, tf.reduce_mean(tf.squared_difference(y, self.target)))
-        self.train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.loss)
+        self.all_gradients = optimizer.compute_gradients(self.loss)
+        self.train_op = optimizer.apply_gradients(self.all_gradients)
 
     def train(self, sess, train_x, train_y):
         _, loss = sess.run([self.train_op, self.loss], feed_dict={
@@ -40,7 +39,7 @@ class BackPropRegression:
 
 class BackPropClissification:
     def __init__(self, dim_in, dim_hidden, dim_out, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer(), bottom_layer=None):
+                 initializer=tf.random_normal_initializer(), bottom_layer=None, optimizer=None):
         if bottom_layer is None:
             self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
             var_in = self.x
@@ -48,28 +47,35 @@ class BackPropClissification:
             self.x = bottom_layer.x
             var_in = bottom_layer.var_out
 
+        if optimizer is None:
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
         _, __, ___, phi = \
-            fully_connected('fully_connected_layer1', var_in, dim_in, dim_hidden, initializer, gate.gate_fun)
+            fully_connected('backprop', 'fully_connected_layer1', var_in, dim_in, dim_hidden, initializer, gate.gate_fun)
         _, __, ___, y = \
-            fully_connected('fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
+            fully_connected('backprop', 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
         self.pred = tf.nn.softmax(y)
-        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
+        ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target)
+        self.loss = tf.reduce_mean(ce_loss)
+        self.total_loss = tf.reduce_sum(ce_loss)
         correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        self.train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(self.loss)
+        self.correct_labels = tf.reduce_sum(tf.cast(correct_prediction, "float"))
+        self.all_gradients = optimizer.compute_gradients(self.loss)
+        self.train_op = optimizer.apply_gradients(self.all_gradients)
+        self.other_info = [self.total_loss, self.correct_labels]
 
     def train(self, sess, train_x, train_y):
-        _, loss, accuracy, pred = \
-            sess.run([self.train_op, self.loss, self.accuracy, self.pred],
+        _, total_loss, correct_labels = \
+            sess.run([self.train_op, self.total_loss, self.correct_labels],
                      feed_dict={
                          self.x: train_x,
                          self.target: train_y
                      })
-        return loss, accuracy
+        return total_loss, correct_labels
 
     def test(self, sess, test_x, test_y):
-        return sess.run([self.loss, self.accuracy], feed_dict={
+        return sess.run([self.total_loss, self.correct_labels], feed_dict={
             self.x: test_x,
             self.target: test_y
         })
