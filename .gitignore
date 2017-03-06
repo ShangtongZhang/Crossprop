@@ -10,6 +10,7 @@ tmp.py
 tfTrainMNISTSingle.py
 upload.py
 cifar10
+log
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
