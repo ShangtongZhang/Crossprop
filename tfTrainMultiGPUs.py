@@ -11,27 +11,53 @@ from TFCrossprop import *
 from TFBackprop import *
 from load_cifar10 import *
 from TFAllCNN import *
+from load_mnist import *
 
-train_x, train_y, test_x, test_y = load_cifar10('cifar10')
+# MNIST = True
+MNIST = False
+
+if MNIST:
+    train_x, train_y = load_mnist('training')
+    test_x, test_y = load_mnist('testing')
+else:
+    train_x, train_y, test_x, test_y = load_cifar10('cifar10')
 
 train_examples = train_x.shape[0]
 test_examples = test_x.shape[0]
-# train_examples = 200
+# train_examples = 10000
 # test_examples = 200
 train_x = train_x[: train_examples, :, :, :]
 train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :, :, :]
 test_y = test_y[: test_examples, :]
 
+if MNIST:
+    _, width, height, _ = train_x.shape
+    depth_0 = 1 # channels
+    filter_1 = 5
+    depth_1 = 64
+    filter_2 = 5
+    depth_2 = 64
+    dim_in = width * height * depth_2 // 16
+    dim_hidden = 1024
+    dim_out = 10
+    dims = [width, height, depth_0, filter_1, depth_1, filter_2, depth_2]
+    # gate = Tanh()
+    gate = Relu()
+    tag = 'MNIST'
+    initialzer = tf.random_normal_initializer()
+else:
+    dim_in = 8 * 8 * 10
+    dim_hidden = 320
+    dim_out = 10
+    gate = Relu()
+    # gate = Tanh()
+    tag = 'CIFAR10'
+    initialzer = orthogonal_initializer(np.sqrt(2.0))
 
-num_gpus = 3
-dim_in = 8 * 8 * 10
-dim_hidden = 320
-dim_out = 10
-gate = Relu()
+num_gpus = 16
 epochs = 200
 batch_size = 200
-initialzer = tf.random_normal_initializer()
 
 def train_cp(learning_rate):
     with tf.Graph().as_default(), tf.device('/cpu:0'):
@@ -43,10 +69,13 @@ def train_cp(learning_rate):
             for i in range(num_gpus):
                 with tf.device('/gpu:%d' % i):
                     with tf.name_scope('corssprop_%d' % i):
-                        cpAllCNN = AllCNN('cp-AllCNN', gate, initialzer)
+                        if MNIST:
+                            bottom_layer = ConvLayers('cp-conv', dims, gate, initialzer)
+                        else:
+                            bottom_layer = AllCNN('cp-AllCNN', gate, initialzer)
                         cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate,
                                                      gate=gate, initializer=initialzer,
-                                                     bottom_layer=cpAllCNN,
+                                                     bottom_layer=bottom_layer,
                                                      optimizer=optimizer)
                         towers.append(cp)
                         tf.get_variable_scope().reuse_variables()
@@ -109,10 +138,13 @@ def train_bp(learning_rate):
             for i in range(num_gpus):
                 with tf.device('/gpu:%d' % i):
                     with tf.name_scope('corssprop_%d' % i):
-                        bpAllCNN = AllCNN('bp-AllCNN', gate, initialzer)
+                        if MNIST:
+                            bottom_layer = ConvLayers('bp-conv', dims, gate, initialzer)
+                        else:
+                            bottom_layer = AllCNN('bp-AllCNN', gate, initialzer)
                         bp = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate,
                                                      gate=gate, initializer=initialzer,
-                                                     bottom_layer=bpAllCNN,
+                                                     bottom_layer=bottom_layer,
                                                      optimizer=optimizer)
                         towers.append(bp)
                         tf.get_variable_scope().reuse_variables()
@@ -162,9 +194,6 @@ def train_bp(learning_rate):
             print 'BP: Epoch', ep, 'Train', train_loss[ep], train_acc[ep], 'Test', test_loss[ep], test_acc[ep]
     return train_loss, train_acc, test_loss, test_acc
 
-# train_cp(0.0001)
-# train_bp(0.0001)
-
 def train(learning_rate):
     labels = ['bp', 'cp']
     train_fn = [train_bp, train_cp]
@@ -177,13 +206,13 @@ def train(learning_rate):
         for i in range(len(labels)):
             train_loss[i, run, :], train_acc[i, run, :], test_loss[i, run, :], test_acc[i, run, :] = \
                 train_fn[i](learning_rate)
-    fr = open('tmp/cifar10_AllCNN_'+str(learning_rate)+'.bin', 'wb')
+    fw = open('data/'+tag+'_'+str(learning_rate)+'.bin', 'wb')
     pickle.dump({'lr': learning_rate,
              'bs': batch_size,
-             'stats': [train_loss, train_acc, test_loss, test_acc]}, fr)
-    fr.close()
+             'stats': [train_loss, train_acc, test_loss, test_acc]}, fw)
+    fw.close()
 
-
-learning_rates = np.power(2.0, np.arange(-13, -8))
+learning_rates = np.power(2.0, np.arange(-13, -5))
 for lr in learning_rates:
     train(lr)
+# train_cp(2.0 ** -5)
