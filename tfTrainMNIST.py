@@ -16,7 +16,7 @@ from CrosspropAlternate import *
 train_x, train_y = load_mnist('training')
 test_x, test_y = load_mnist('testing')
 
-epochs = 1 #200
+epochs = 200 #200
 batch_size = 1
 learning_rate = 0.0001
 dim_in = 28 * 28
@@ -43,6 +43,10 @@ cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Ta
 bp = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
 methods = [cp, bp]
 with tf.Session() as sess:
+    # add a tensorboard writer
+    writer = tf.summary.FileWriter("/tmp/tfTrainMNIST/1")
+    writer.add_graph(sess.graph)
+
     for var in tf.global_variables():
         sess.run(var.initializer)
     for ep in range(epochs):
