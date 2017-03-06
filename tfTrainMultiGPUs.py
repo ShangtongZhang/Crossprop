@@ -12,6 +12,18 @@ from TFBackprop import *
 from load_cifar10 import *
 from TFAllCNN import *
 from load_mnist import *
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('log/multi_gpu.txt')
+fh.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 # MNIST = True
 MNIST = False
@@ -24,7 +36,7 @@ else:
 
 train_examples = train_x.shape[0]
 test_examples = test_x.shape[0]
-# train_examples = 10000
+# train_examples = 1000
 # test_examples = 200
 train_x = train_x[: train_examples, :, :, :]
 train_y = train_y[: train_examples, :]
@@ -107,7 +119,7 @@ def train_cp(learning_rate):
                              feed_dict=feed_dict)
                 h = np.multiply(h, h_decay_var / batch_size) - learning_rate * h_delta_var / batch_size
                 batch_begin = batch_end
-                # print total_loss_var
+                logger.debug('%f', total_loss_var)
                 train_loss[ep] += total_loss_var
                 train_acc[ep] += correct_labels_var
             train_loss[ep] /= train_examples
@@ -125,7 +137,8 @@ def train_cp(learning_rate):
             test_loss[ep] /= test_examples
             test_acc[ep] /= test_examples
 
-            print 'CP: Epoch', ep, 'Train', train_loss[ep], train_acc[ep], 'Test', test_loss[ep], test_acc[ep]
+            logger.info('CP: Epoch %d Train %f %f Test %f %f',
+                        ep, train_loss[ep], train_acc[ep], test_loss[ep], test_acc[ep])
     return train_loss, train_acc, test_loss, test_acc
 
 def train_bp(learning_rate):
@@ -173,7 +186,7 @@ def train_bp(learning_rate):
                     sess.run([train_op, total_loss, correct_labels],
                              feed_dict=feed_dict)
                 batch_begin = batch_end
-                # print total_loss_var
+                logger.debug('%f', total_loss_var)
                 train_loss[ep] += total_loss_var
                 train_acc[ep] += correct_labels_var
             train_loss[ep] /= train_examples
@@ -191,7 +204,8 @@ def train_bp(learning_rate):
             test_loss[ep] /= test_examples
             test_acc[ep] /= test_examples
 
-            print 'BP: Epoch', ep, 'Train', train_loss[ep], train_acc[ep], 'Test', test_loss[ep], test_acc[ep]
+            logger.info('BP: Epoch %d Train %f %f Test %f %f',
+                        ep, train_loss[ep], train_acc[ep], test_loss[ep], test_acc[ep])
     return train_loss, train_acc, test_loss, test_acc
 
 def train(learning_rate):
