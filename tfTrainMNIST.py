@@ -6,6 +6,7 @@
 
 # import pickle
 import numpy as np
+from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
 from tqdm import tqdm
 from TFCrossprop import *
@@ -16,7 +17,11 @@ from CrosspropAlternate import *
 train_x, train_y = load_mnist('training')
 test_x, test_y = load_mnist('testing')
 
-epochs = 200 #200
+# TODO: add pull MNIST from tensorflow proper
+# mnist = input_data.read_data_sets('/tmp/data/', one_hot=True,
+                                    # fake_data=False)
+
+epochs = 200
 batch_size = 1
 learning_rate = 0.0001
 dim_in = 28 * 28
@@ -38,28 +43,42 @@ test_y = test_y[: test_examples, :]
 labels = ['cp', 'bp']
 labels = ['cp']
 initialzer = tf.random_normal_initializer()
-# initialzer = tf.ones_initializer()
-cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
-bp = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
-methods = [cp, bp]
+
+# Create the model from TFCrossprop
+crossPropModel = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
+
 with tf.Session() as sess:
+
     # add a tensorboard writer
-    writer = tf.summary.FileWriter("/tmp/tfTrainMNIST/1")
+    writer = tf.summary.FileWriter("/tmp/tfTrainMNIST/5")
     writer.add_graph(sess.graph)
 
-    for var in tf.global_variables():
-        sess.run(var.initializer)
-    for ep in range(epochs):
-        cur = 0
-        total_loss = 0.0
-        while cur < train_x.shape[0]:
-            end = min(cur + batch_size, train_x.shape[0])
-            for i in range(len(labels)):
-                loss, _ = methods[i].train(sess, train_x[cur: end, :], train_y[cur: end, :])
-                total_loss += loss
-            cur = end
-        print total_loss / train_examples * batch_size
+    # initialize all the variables
+    tf.global_variables_initializer().run()
+    
+    # how often to report the performance
+    reportEveryN = 1
 
-        for i in range(len(labels)):
-            loss, acc = methods[i].test(sess, test_x, test_y)
-            print labels[i], 'epoch', ep, 'loss', loss, 'accuracy', acc
+    # each epoch is an entire pass through the data
+    for ep in tqdm(range(epochs)):
+        for start_index in tqdm(range(0, train_examples, batch_size)):
+            # another training pass on the next batch of training examples
+            # build the batch
+            batch_xs = train_x[start_index:start_index+batch_size, :]
+            batch_ys = train_y[start_index:start_index+batch_size, :]
+            result = crossPropModel.train(sess, batch_xs, batch_ys)
+
+        # add some reporting to track learning
+        if ep % reportEveryN == 0:
+            # report the testing accuracy on the test set
+            result = crossPropModel.test(sess, test_x, test_y)
+            # pull summary statistics from the training step
+            summary_str = result[0]
+            loss = result[1]
+            acc = result[2]
+            writer.add_summary(summary_str, ep)
+            print('Loss at epoch %s: %s' % (ep, loss))
+            print('Accuracy at epoch %s: %s' % (ep, acc))
+
+# close THE WRITER after
+writer.close()

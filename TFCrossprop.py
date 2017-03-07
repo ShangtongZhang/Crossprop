@@ -86,19 +86,41 @@ class CrossPropClassification:
         self.learning_rate = learning_rate
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
-        self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
-        self.h = tf.placeholder(tf.float32, shape=(dim_hidden, dim_out))
+        self.x = tf.placeholder(tf.float32, shape=(None, dim_in), name='x-input')
+        self.h = tf.placeholder(tf.float32, shape=(dim_hidden, dim_out), name='hidden')
 
-        self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
+        with tf.name_scope('crossprop_layer'):
+            U, b_hidden, net, phi, W, b_out, y =\
+                crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
+        
+        _ = tf.summary.histogram('U', U)
+        _ = tf.summary.histogram('b_hidden', b_hidden)
+        _ = tf.summary.histogram('W', W)
+        _ = tf.summary.histogram('b_out', b_out)
+        _ = tf.summary.histogram('y', y)
+        
+        # define the prediction
+        with tf.name_scope('prediction'):
+            self.pred = tf.nn.softmax(y)
 
-        U, b_hidden, net, phi, W, b_out, y =\
-            crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer)
-        self.pred = tf.nn.softmax(y)
-        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
-        correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        delta = tf.subtract(self.pred, self.target)
+        _ = tf.summary.histogram('pred', self.pred)
 
+        # define the target
+        self.target = tf.placeholder(tf.float32, shape=(None, dim_out), name='target')
+
+        # define the cross entropy name scope
+        with tf.name_scope('xent'):
+            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target))
+            _ = tf.summary.scalar('cross entropy', self.loss)
+            
+        # define accuracy on the prediction
+        with tf.name_scope('test'):
+            correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+            _ = tf.summary.scalar('accuracy', self.accuracy)
+            
+            # calculate the delta
+            delta = tf.subtract(self.pred, self.target)
 
         h_decay = tf.subtract(1.0, tf.scalar_mul(learning_rate, tf.pow(phi, 2)))
         h_decay = tf.reshape(tf.tile(h_decay, [1, tf.shape(self.h)[1]]), [-1, tf.shape(self.h)[1], tf.shape(self.h)[0]])
@@ -127,19 +149,23 @@ class CrossPropClassification:
 
         self.h_var = np.zeros((dim_hidden, dim_out))
 
+        # merge all the summaries
+        self.merged = tf.summary.merge_all()
+
     def train(self, sess, train_x, train_y):
-        _, loss, accuracy, h_decay_var, h_delta_var, pred = \
-            sess.run([self.train_op, self.loss, self.accuracy, self.h_decay, self.h_delta, self.pred],
-                     feed_dict={
-                         self.x: train_x,
-                         self.target: train_y,
-                         self.h: self.h_var
-                     })
+        result = sess.run([self.merged, self.accuracy, self.train_op, self.loss, self.h_decay, self.h_delta, self.pred], feed_dict={self.x: train_x, self.target: train_y, self.h: self.h_var})
+
+        # pull the h_ update parameters from the result
+        h_decay_var = result[4]
+        h_delta_var = result[5]
+
+        # update h_var
         self.h_var = np.multiply(h_decay_var, self.h_var) - self.learning_rate * h_delta_var
-        return loss, accuracy
+        
+        return result
 
     def test(self, sess, test_x, test_y):
-        return sess.run([self.loss, self.accuracy], feed_dict={
+        return sess.run([self.merged, self.loss, self.accuracy], feed_dict={
             self.x: test_x,
             self.target: test_y
         })
