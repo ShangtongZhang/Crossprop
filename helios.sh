@@ -2,7 +2,7 @@
 #PBS -A pau-670-aa
 #PBS -l walltime=12:00:00 -l mem=32gb
 #PBS -l feature=k80
-#PBS -l nodes=1:gpus=16
+#PBS -l nodes=1:gpus=4
 #PBS -r n
 
 module load compilers/gcc/4.8.5 cuda/7.5 libs/cuDNN/5
@@ -18,5 +18,5 @@ export PYTHONPATH=$PWD
 echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
-python tfTrainCIFAR10.py
+python tfTrainMultiGPUs.py
 echo "Job finished with exit code $? at: `date`"

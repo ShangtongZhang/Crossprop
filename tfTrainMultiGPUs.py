@@ -13,9 +13,11 @@ from load_cifar10 import *
 from TFAllCNN import *
 from load_mnist import *
 import logging
+
+token = 'MNIST'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('log/multi_gpu.txt')
+fh = logging.FileHandler('log/%s_multi_gpu.txt' % token)
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
@@ -36,16 +38,15 @@ else:
 
 train_examples = train_x.shape[0]
 test_examples = test_x.shape[0]
-# train_examples = 1000
-# test_examples = 200
+train_examples = 1000
+test_examples = 200
 train_x = train_x[: train_examples, :, :, :]
 train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :, :, :]
 test_y = test_y[: test_examples, :]
 
 if MNIST:
-    _, width, height, _ = train_x.shape
-    depth_0 = 1 # channels
+    _, width, height, depth_0 = train_x.shape
     filter_1 = 5
     depth_1 = 64
     filter_2 = 5
@@ -57,9 +58,11 @@ if MNIST:
     # gate = Tanh()
     gate = Relu()
     tag = 'MNIST'
-    initialzer = tf.random_normal_initializer()
+    # initialzer = tf.random_normal_initializer()
+    initialzer = orthogonal_initializer(np.sqrt(2.0))
 else:
-    dim_in = 8 * 8 * 10
+    # dim_in = 8 * 8 * 10
+    dim_in = 4 * 4 * 10
     dim_hidden = 320
     dim_out = 10
     gate = Relu()
@@ -67,7 +70,7 @@ else:
     tag = 'CIFAR10'
     initialzer = orthogonal_initializer(np.sqrt(2.0))
 
-num_gpus = 16
+num_gpus = 1
 epochs = 200
 batch_size = 200
 
@@ -119,7 +122,7 @@ def train_cp(learning_rate):
                              feed_dict=feed_dict)
                 h = np.multiply(h, h_decay_var / batch_size) - learning_rate * h_delta_var / batch_size
                 batch_begin = batch_end
-                logger.debug('%f', total_loss_var)
+                logger.debug('cp_%f', total_loss_var)
                 train_loss[ep] += total_loss_var
                 train_acc[ep] += correct_labels_var
             train_loss[ep] /= train_examples
@@ -186,9 +189,10 @@ def train_bp(learning_rate):
                     sess.run([train_op, total_loss, correct_labels],
                              feed_dict=feed_dict)
                 batch_begin = batch_end
-                logger.debug('%f', total_loss_var)
+                logger.debug('bp_%f', total_loss_var)
                 train_loss[ep] += total_loss_var
                 train_acc[ep] += correct_labels_var
+                # logger.info('%d', correct_labels_var)
             train_loss[ep] /= train_examples
             train_acc[ep] /= train_examples
 
@@ -220,13 +224,13 @@ def train(learning_rate):
         for i in range(len(labels)):
             train_loss[i, run, :], train_acc[i, run, :], test_loss[i, run, :], test_acc[i, run, :] = \
                 train_fn[i](learning_rate)
-    fw = open('data/'+tag+'_'+str(learning_rate)+'.bin', 'wb')
+    fw = open('tmp/'+token+'_'+tag+'_'+str(learning_rate)+'.bin', 'wb')
     pickle.dump({'lr': learning_rate,
              'bs': batch_size,
              'stats': [train_loss, train_acc, test_loss, test_acc]}, fw)
     fw.close()
 
 learning_rates = np.power(2.0, np.arange(-13, -5))
-for lr in learning_rates:
-    train(lr)
-# train_cp(2.0 ** -5)
+# for lr in learning_rates:
+#     train(lr)
+train_bp(2.0 ** -11)

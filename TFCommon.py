@@ -7,6 +7,11 @@
 import numpy as np
 import tensorflow as tf
 
+if tf.__version__ == '1.0.0':
+    concat = tf.concat
+else:
+    concat = tf.concat_v2
+
 def orthogonal_initializer(scale=1.0):
     # From Lasagne and Keras. Reference: Saxe et al., http://arxiv.org/abs/1312.6120
     def _initializer(shape, dtype=tf.float32, partition_info=None):
@@ -42,7 +47,7 @@ def sum_info(tower_infos):
         expanded_info = []
         for info in tower_infos:
             expanded_info.append(tf.expand_dims(info[i], 0))
-        info = tf.concat(expanded_info, 0)
+        info = concat(expanded_info, 0)
         info = tf.reduce_sum(info, 0)
         sum_infos.append(info)
     return sum_infos
@@ -71,7 +76,7 @@ def average_gradients(tower_grads):
             grads.append(expanded_g)
 
         # Average over the 'tower' dimension.
-        grad = tf.concat(grads, 0)
+        grad = concat(grads, 0)
         grad = tf.reduce_mean(grad, 0)
 
         # Keep in mind that the Variables are redundant because they are shared
