@@ -5,6 +5,7 @@
 #######################################################################
 
 # import pickle
+import time
 import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
@@ -40,8 +41,6 @@ train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :]
 test_y = test_y[: test_examples, :]
 
-labels = ['cp', 'bp']
-labels = ['cp']
 initialzer = tf.random_normal_initializer()
 
 # Create the model from TFCrossprop
@@ -50,7 +49,10 @@ crossPropModel = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_r
 with tf.Session() as sess:
 
     # add a tensorboard writer
-    writer = tf.summary.FileWriter("/tmp/tfTrainMNIST/5")
+    ts = time.time()
+    logdir = '/tmp/tfTrainMNIST/logs/run' + str(ts)
+    print('Log dir:' + logdir)
+    writer = tf.summary.FileWriter(logdir)
     writer.add_graph(sess.graph)
 
     # initialize all the variables
