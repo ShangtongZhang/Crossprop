@@ -21,31 +21,32 @@ test_x, test_y = load_mnist('testing')
 # TODO: add pull MNIST from tensorflow proper
 # mnist = input_data.read_data_sets('/tmp/data/', one_hot=True,
                                     # fake_data=False)
-
 epochs = 2000
-batch_size = 50
-learning_rate = 0.0005
+batch_size = 250
+learning_rate = 0.0025
 dim_in = 28 * 28
-dim_hidden = 748
+dim_hidden = 2048
 dim_out = 10
+keep_prob = [0.9, 0.75]
+gate = Relu()
 
 train_x = np.matrix(train_x.reshape([-1, dim_in])) / 255.0
 train_y = np.matrix(dense_to_one_hot(train_y))
 test_x = np.matrix(test_x.reshape([-1, dim_in])) / 255.0
 test_y = np.matrix(dense_to_one_hot(test_y))
 
-train_examples = 1000
+train_examples = 2000
 test_examples = 100
 train_x = train_x[: train_examples, :]
 train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :]
 test_y = test_y[: test_examples, :]
 
-initialzer = tf.random_normal_initializer()
+# initialzer = tf.random_normal_initializer()
+initialzer = tf.contrib.layers.xavier_initializer()
 
 # Create the model from TFCrossprop
-keep_prob = 0.8
-crossPropModel = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, keep_prob, gate=Tanh(), initializer=initialzer)
+crossPropModel = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, keep_prob, gate=gate, initializer=initialzer)
 
 with tf.Session() as sess:
 

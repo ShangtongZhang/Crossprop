@@ -84,18 +84,19 @@ class CrossPropClassification:
     def __init__(self, dim_in, dim_hidden, dim_out, learning_rate, keep_prob, gate=Relu(),
                  initializer=tf.random_normal_initializer()):
         self.learning_rate = learning_rate
-        # optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
         # optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        # optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 
         self.x = tf.placeholder(tf.float32, shape=(None, dim_in), name='x-input')
         self.h = tf.placeholder(tf.float32, shape=(dim_hidden, dim_out), name='hidden')
 
-        self.keep_prob = tf.placeholder(tf.float32)
+        self.keep_prob_input = tf.placeholder(tf.float32)
+        self.keep_prob_hidden = tf.placeholder(tf.float32)
 
         with tf.name_scope('crossprop_layer'):
             U, b_hidden, net, phi, W, b_out, y =\
-                crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer, self.keep_prob)
+                crossprop_layer('crossprop_layer', self.x, dim_in, dim_hidden, dim_out, gate.gate_fun, initializer, self.keep_prob_input, self.keep_prob_hidden)
         
         _ = tf.summary.histogram('U', U)
         _ = tf.summary.histogram('b_hidden', b_hidden)
@@ -158,7 +159,7 @@ class CrossPropClassification:
 
     def train(self, sess, train_x, train_y, keep_prob):
         result = sess.run([self.merged, self.accuracy, self.train_op, self.loss, self.h_decay, self.h_delta, self.pred], \
-            feed_dict={self.x: train_x, self.target: train_y, self.h: self.h_var, self.keep_prob: keep_prob})
+            feed_dict={self.x: train_x, self.target: train_y, self.h: self.h_var, self.keep_prob_input: keep_prob[0], self.keep_prob_hidden: keep_prob[1]})
 
         # pull the h_ update parameters from the result
         h_decay_var = result[4]
@@ -170,4 +171,4 @@ class CrossPropClassification:
         return result
 
     def test(self, sess, test_x, test_y):
-        return sess.run([self.merged, self.loss, self.accuracy], feed_dict={self.x: test_x,self.target: test_y,self.keep_prob: 1.0})
+        return sess.run([self.merged, self.loss, self.accuracy], feed_dict={self.x: test_x, self.target: test_y, self.keep_prob_input: 1.0, self.keep_prob_hidden: 1.0})
