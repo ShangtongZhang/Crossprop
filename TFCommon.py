@@ -28,7 +28,7 @@ def fully_connected(name, var_in, dim_in, dim_out,
   y_hat = transfer(z_hat)
   return W, b, z_hat, y_hat
 
-def crossprop_layer(name, var_in, dim_in, dim_hidden, dim_out, gate_fun, initializer, reuse=False):
+def crossprop_layer(name, var_in, dim_in, dim_hidden, dim_out, gate_fun, initializer, keep_prob, reuse=False):
     with variable_scope.variable_scope(name, reuse=False):
         if reuse:
             U = variable_scope.get_variable('U', [dim_in, dim_hidden])
@@ -47,7 +47,11 @@ def crossprop_layer(name, var_in, dim_in, dim_hidden, dim_out, gate_fun, initial
         net = math_ops.matmul(var_in, U)
         net = nn_ops.bias_add(net, b_hidden)
         phi = gate_fun(net)
-        y = math_ops.matmul(phi, W)
+        
+        # dropout
+        W_drop = tf.nn.dropout(W, keep_prob)
+        
+        y = math_ops.matmul(phi, W_drop)
         y = nn_ops.bias_add(y, b_out)
         return U, b_hidden, net, phi, W, b_out, y
 

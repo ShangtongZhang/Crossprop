@@ -22,11 +22,11 @@ test_x, test_y = load_mnist('testing')
 # mnist = input_data.read_data_sets('/tmp/data/', one_hot=True,
                                     # fake_data=False)
 
-epochs = 200
-batch_size = 1
-learning_rate = 0.0001
+epochs = 2000
+batch_size = 50
+learning_rate = 0.0005
 dim_in = 28 * 28
-dim_hidden = 1024
+dim_hidden = 748
 dim_out = 10
 
 train_x = np.matrix(train_x.reshape([-1, dim_in])) / 255.0
@@ -44,7 +44,8 @@ test_y = test_y[: test_examples, :]
 initialzer = tf.random_normal_initializer()
 
 # Create the model from TFCrossprop
-crossPropModel = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)
+keep_prob = 0.8
+crossPropModel = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, keep_prob, gate=Tanh(), initializer=initialzer)
 
 with tf.Session() as sess:
 
@@ -68,7 +69,7 @@ with tf.Session() as sess:
             # build the batch
             batch_xs = train_x[start_index:start_index+batch_size, :]
             batch_ys = train_y[start_index:start_index+batch_size, :]
-            result = crossPropModel.train(sess, batch_xs, batch_ys)
+            result = crossPropModel.train(sess, batch_xs, batch_ys, keep_prob)
 
         # add some reporting to track learning
         if ep % reportEveryN == 0:
