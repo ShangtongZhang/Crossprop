@@ -7,7 +7,7 @@
 import numpy as np
 import tensorflow as tf
 
-if tf.__version__ == '1.0.0':
+if tf.__version__.startswith('1'):
     concat = tf.concat
 else:
     concat = tf.concat_v2
@@ -35,7 +35,7 @@ def get_feed_dict(batch_begin, batch_end, num_gpus, x, y, h, towers):
                  for i in range(num_gpus)]
     gpu_tasks[-1][-1] = batch_end
     for i, (b, e) in enumerate(gpu_tasks):
-        feed_dict[towers[i].x] = x[b: e, :, :, :]
+        feed_dict[towers[i].x] = x[b: e, :]
         feed_dict[towers[i].target] = y[b: e, :]
         if h is not None:
             feed_dict[towers[i].h] = h

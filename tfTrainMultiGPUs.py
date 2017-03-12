@@ -14,10 +14,16 @@ from TFAllCNN import *
 from load_mnist import *
 import logging
 
-token = 'MNIST'
+# DATA_SET = 'CIFAR'
+DATA_SET = 'MNIST'
+
+NN_ARCH = 'SINGLE'
+# NN_ARCH = 'CONV'
+# NN_ARCH = 'AllCNN'
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('log/%s_multi_gpu.txt' % token)
+fh = logging.FileHandler('log/%s_%s_multi_gpu.txt' % (DATA_SET, NN_ARCH))
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
@@ -27,25 +33,34 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-# MNIST = True
-MNIST = False
-
-if MNIST:
+if DATA_SET == 'MNIST':
     train_x, train_y = load_mnist('training')
     test_x, test_y = load_mnist('testing')
-else:
+elif DATA_SET == 'CIFAR':
     train_x, train_y, test_x, test_y = load_cifar10('cifar10')
+else:
+    logger.error('No Dataset!')
 
 train_examples = train_x.shape[0]
 test_examples = test_x.shape[0]
-train_examples = 1000
-test_examples = 200
+# train_examples = 1000
+# test_examples = 200
 train_x = train_x[: train_examples, :, :, :]
 train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :, :, :]
 test_y = test_y[: test_examples, :]
 
-if MNIST:
+if NN_ARCH == 'SINGLE':
+    train_x = np.sum(train_x, axis=3)
+    train_x = train_x.reshape([train_examples, -1])
+    test_x = np.sum(test_x, axis=3)
+    test_x = test_x.reshape([test_examples, -1])
+
+
+gate = Relu()
+initialzer = orthogonal_initializer(np.sqrt(2.0))
+# initialzer = tf.random_normal_initializer()
+if NN_ARCH == 'CONV':
     _, width, height, depth_0 = train_x.shape
     filter_1 = 5
     depth_1 = 64
@@ -55,24 +70,27 @@ if MNIST:
     dim_hidden = 1024
     dim_out = 10
     dims = [width, height, depth_0, filter_1, depth_1, filter_2, depth_2]
-    # gate = Tanh()
-    gate = Relu()
-    tag = 'MNIST'
-    # initialzer = tf.random_normal_initializer()
-    initialzer = orthogonal_initializer(np.sqrt(2.0))
-else:
-    # dim_in = 8 * 8 * 10
+elif NN_ARCH == 'AllCNN':
     dim_in = 4 * 4 * 10
     dim_hidden = 320
     dim_out = 10
-    gate = Relu()
-    # gate = Tanh()
-    tag = 'CIFAR10'
-    initialzer = orthogonal_initializer(np.sqrt(2.0))
+elif NN_ARCH == 'SINGLE':
+    dim_in = train_x.shape[1]
+    dim_hidden = 1024
+    dim_out = 10
+else:
+    logger.error('No NN Arch!')
 
-num_gpus = 1
+
+num_gpus = 4
 epochs = 200
 batch_size = 200
+
+def shuffle(x, y):
+    indices = np.arange(x.shape[0])
+    np.random.shuffle(indices)
+    x = x[indices]
+    y = y[indices]
 
 def train_cp(learning_rate):
     with tf.Graph().as_default(), tf.device('/cpu:0'):
@@ -84,10 +102,12 @@ def train_cp(learning_rate):
             for i in range(num_gpus):
                 with tf.device('/gpu:%d' % i):
                     with tf.name_scope('corssprop_%d' % i):
-                        if MNIST:
+                        if NN_ARCH == 'CONV':
                             bottom_layer = ConvLayers('cp-conv', dims, gate, initialzer)
-                        else:
+                        elif NN_ARCH == 'AllCNN':
                             bottom_layer = AllCNN('cp-AllCNN', gate, initialzer)
+                        elif NN_ARCH == 'SINGLE':
+                            bottom_layer = None
                         cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate,
                                                      gate=gate, initializer=initialzer,
                                                      bottom_layer=bottom_layer,
@@ -113,6 +133,7 @@ def train_cp(learning_rate):
         test_loss = np.zeros(epochs)
         test_acc = np.zeros(epochs)
         for ep in range(epochs):
+            shuffle(train_x, train_y)
             batch_begin = 0
             while batch_begin < train_examples:
                 batch_end = min(batch_begin + batch_size, train_examples)
@@ -154,10 +175,12 @@ def train_bp(learning_rate):
             for i in range(num_gpus):
                 with tf.device('/gpu:%d' % i):
                     with tf.name_scope('corssprop_%d' % i):
-                        if MNIST:
+                        if NN_ARCH == 'CONV':
                             bottom_layer = ConvLayers('bp-conv', dims, gate, initialzer)
-                        else:
+                        elif NN_ARCH == 'AllCNN':
                             bottom_layer = AllCNN('bp-AllCNN', gate, initialzer)
+                        elif NN_ARCH == 'SINGLE':
+                            bottom_layer = None
                         bp = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate,
                                                      gate=gate, initializer=initialzer,
                                                      bottom_layer=bottom_layer,
@@ -181,6 +204,7 @@ def train_bp(learning_rate):
         test_loss = np.zeros(epochs)
         test_acc = np.zeros(epochs)
         for ep in range(epochs):
+            shuffle(train_x, train_y)
             batch_begin = 0
             while batch_begin < train_examples:
                 batch_end = min(batch_begin + batch_size, train_examples)
@@ -192,7 +216,6 @@ def train_bp(learning_rate):
                 logger.debug('bp_%f', total_loss_var)
                 train_loss[ep] += total_loss_var
                 train_acc[ep] += correct_labels_var
-                # logger.info('%d', correct_labels_var)
             train_loss[ep] /= train_examples
             train_acc[ep] /= train_examples
 
@@ -224,13 +247,13 @@ def train(learning_rate):
         for i in range(len(labels)):
             train_loss[i, run, :], train_acc[i, run, :], test_loss[i, run, :], test_acc[i, run, :] = \
                 train_fn[i](learning_rate)
-    fw = open('tmp/'+token+'_'+tag+'_'+str(learning_rate)+'.bin', 'wb')
+    fw = open('data/'+NN_ARCH+'_'+DATA_SET+'_'+str(learning_rate)+'.bin', 'wb')
     pickle.dump({'lr': learning_rate,
              'bs': batch_size,
              'stats': [train_loss, train_acc, test_loss, test_acc]}, fw)
     fw.close()
 
 learning_rates = np.power(2.0, np.arange(-13, -5))
-# for lr in learning_rates:
-#     train(lr)
-train_bp(2.0 ** -11)
+for lr in learning_rates:
+    train(lr)
+# train_cp(2.0 ** -11)
