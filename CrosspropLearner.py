@@ -4,51 +4,26 @@
 # declaration at the top                                              #
 #######################################################################
 
-from __future__ import print_function
 import numpy as np
 from functools import partial
 from multiprocessing import Pool
 import pickle
+from BasicLearner import *
 from Activation import *
 from Initialization import *
 
-class CrossPropLearner:
-    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', asOutput=False):
-        self.stepSize = stepSize
-        self.asOutput = asOutput
-        self.bias = bias
-        dims[0] += int(bias[0])
-        dims[1] += int(bias[1])
+class CrossPropLearner(BasicLearner):
+    def __init__(self, stepSize, dims, bias=[True, True],
+                 activation='relu', init='orthogonal', asOutput=False,
+                 use_normal=False, lr_decay_factor=None):
+        BasicLearner.__init__(self, stepSize, dims, bias, activation, init, asOutput,
+                              use_normal, lr_decay_factor)
 
-        if init == 'orthogonal':
-            self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
-        else:
-            self.U = np.matrix(np.random.randn(dims[0], dims[1]))
-            # self.U = np.matrix(np.zeros((dims[0], dims[1])))
-
-        self.W = np.matrix(np.random.randn(dims[1], 1))
-        # self.W = np.matrix(np.zeros((dims[1], 1)))
         self.H = np.matrix(np.zeros((dims[0], dims[1])))
-        if activation == 'relu':
-            self.act = relu
-            self.gradientAct = gradientRelu
-        elif activation == 'tanh':
-            self.act = tanh
-            self.gradientAct = gradientTanh
-        elif activation == 'sigmoid':
-            self.act = sigmoid
-            self.gradientAct = gradientSigmoid
 
-    def predict(self, X):
-        self.X = np.matrix(X)
-        self.net = self.X * self.U
-        self.phi = self.act(self.net)
-        if self.bias[1]:
-            self.phi[:, -1] = 1
-        self.y = self.phi * self.W
-        return self.y
+    def learn(self, target, epoch=None):
+        BasicLearner.learn(self, target, epoch)
 
-    def learn(self, target):
         error = target - self.y
         phi = np.asarray(np.matrix(np.diag(error.flat)) * self.phi)
         wDelta = np.mean(phi, axis=0)
@@ -75,59 +50,20 @@ class CrossPropLearner:
             if self.bias[0]:
                 self.errorInput[:, -1] = 0
 
-        # error = np.asscalar(error)
-        # self.U += self.stepSize * error * np.multiply(np.repeat(np.matrix(self.phi), self.H.shape[0], 0), self.H)
-        # deltaUij = np.dot(np.matrix(self.X).T,
-        #                   np.matrix(self.gradientAct(self.phi, self.net)))
-        # self.H = np.multiply(self.H, 1 - self.stepSize * np.repeat(np.matrix(np.power(self.phi, 2)), self.H.shape[0], 0)) + \
-        #     error * self.stepSize * deltaUij
-        # self.W += self.stepSize * error * self.phi.T
-        # if self.asOutput:
-        #     errorNet = -error * self.W * self.gradientAct(self.phi, self.net)
-        #     if self.bias[1]:
-        #         errorNet[-1] = 0
-        #     self.inputGradient = np.matrix(errorNet) * np.matrix(self.U).T
-        #     if self.bias[0]:
-        #         self.inputGradient[:, -1] = 0
         return 0.5 * np.sum(np.power(error, 2))
 
-class CrossPropLearnerAlt:
-    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal', asOutput=False):
-        self.stepSize = stepSize
-        self.asOutput = asOutput
-        self.bias = bias
-        dims[0] += int(bias[0])
-        dims[1] += int(bias[1])
-        dims.append(1)
-        # dims[2] = 1
+class CrossPropLearnerAlt(BasicLearner):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu',
+                 init='orthogonal', asOutput=False, use_normal=False,
+                 lr_decay_factor=None):
+        BasicLearner.__init__(self, stepSize, dims, bias, activation, init,
+                              asOutput, use_normal, lr_decay_factor)
 
-        if init == 'orthogonal':
-            self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
-        else:
-            self.U = np.matrix(np.random.randn(dims[0], dims[1]))
+        self.H = np.matrix(np.zeros((dims[1], 1)))
 
-        self.W = np.matrix(np.random.randn(dims[1], dims[2]))
-        self.H = np.matrix(np.zeros((dims[1], dims[2])))
-        if activation == 'relu':
-            self.act = relu
-            self.gradientAct = gradientRelu
-        elif activation == 'tanh':
-            self.act = tanh
-            self.gradientAct = gradientTanh
-        elif activation == 'sigmoid':
-            self.act = sigmoid
-            self.gradientAct = gradientSigmoid
+    def learn(self, target, epoch=None):
+        BasicLearner.learn(self, target, epoch)
 
-    def predict(self, X):
-        self.X = np.matrix(X)
-        self.net = self.X * self.U
-        self.phi = self.act(self.net)
-        if self.bias[1]:
-            self.phi[:, -1] = 1
-        self.y = self.phi * self.W
-        return self.y
-
-    def learn(self, target):
         error = self.y - target
 
         gradientW = self.phi.T * error
@@ -153,3 +89,123 @@ class CrossPropLearnerAlt:
             self.errorInput = errorNet
 
         return 0.5 * np.sum(np.power(error, 2))
+
+class CrosspropUtility(BasicLearner):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal',
+                 asOutput=False, use_normal=False, lr_decay_factor=None):
+        BasicLearner.__init__(self, stepSize, dims, bias, activation, init,
+                              asOutput, use_normal, lr_decay_factor)
+
+        self.H = np.zeros((dims[0], dims[1]))
+
+    def learn(self, target, epoch=None):
+        BasicLearner.learn(self, target, epoch)
+        error = target - self.y
+
+        delta_U = np.asarray(self.W).flatten() * self.H
+        self.U += self.stepSize * delta_U
+
+        h_deacy = np.asarray(1 - self.stepSize * np.power(self.phi, 2)).flatten()
+        h_delta = np.asarray(error).flatten() * np.asarray(self.X.T * self.gradientAct(self.phi, self.net))
+        self.H = h_deacy * np.asarray(self.H) + self.stepSize * h_delta
+
+        self.W += self.stepSize * self.phi.T * error
+        return 0.5 * np.sum(np.power(error, 2))
+
+# TODO: refactor classification learner
+class CrossPropLearnerClassification:
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):
+        self.stepSize = stepSize
+        self.bias = bias
+        dims[0] += int(bias[0])
+        dims[1] += int(bias[1])
+        self.dims = dims
+
+        if init == 'orthogonal':
+            self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
+        else:
+            self.U = np.matrix(np.random.randn(dims[0], dims[1]))
+
+        self.W = np.matrix(np.random.randn(dims[1], dims[2]))
+        self.H = np.array(np.zeros((dims[2], dims[0], dims[1])))
+        if activation == 'relu':
+            self.act = relu
+            self.gradientAct = gradientRelu
+        elif activation == 'tanh':
+            self.act = tanh
+            self.gradientAct = gradientTanh
+        elif activation == 'sigmoid':
+            self.act = sigmoid
+            self.gradientAct = gradientSigmoid
+
+    def predict(self, X):
+        self.X = np.matrix(X)
+        self.net = self.X * self.U
+        self.phi = self.act(self.net)
+        if self.bias[1]:
+            self.phi[:, -1] = 1
+        self.y = self.phi * self.W
+        exp_y = np.exp(self.y - np.max(self.y))
+        self.prob = exp_y / np.sum(exp_y)
+        return self.prob
+
+    def learn(self, target):
+        error = np.matrix(target - self.y)
+        phi = np.asarray(np.repeat(self.phi, self.H.shape[1], 0))
+        phi_h = phi * self.H * np.asarray(error).reshape([-1, 1, 1])
+        self.U += self.stepSize * np.sum(phi_h, axis=0)
+
+        h_decay = np.asarray(1 - self.stepSize * np.repeat(np.power(self.phi, 2), self.H.shape[1], 0))
+        deltaUij = self.X.T * self.gradientAct(self.phi, self.net)
+        self.H = h_decay * self.H + self.stepSize * np.asarray(error).reshape([-1, 1, 1]) * np.asarray(deltaUij)
+        self.W += self.stepSize * self.phi.T * error
+        return -np.sum(np.multiply(np.log(self.prob), target))
+
+class CrossPropUtilityClassification:
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):
+        self.stepSize = stepSize
+        self.bias = bias
+        dims[0] += int(bias[0])
+        dims[1] += int(bias[1])
+        self.dims = dims
+
+        if init == 'orthogonal':
+            self.U = np.matrix(orthogonalInit(dims[0], dims[1]))
+        else:
+            self.U = np.matrix(np.random.randn(dims[0], dims[1]))
+
+        self.W = np.matrix(np.random.randn(dims[1], dims[2]))
+        self.H = np.array(np.zeros((dims[2], dims[0], dims[1])))
+        if activation == 'relu':
+            self.act = relu
+            self.gradientAct = gradientRelu
+        elif activation == 'tanh':
+            self.act = tanh
+            self.gradientAct = gradientTanh
+        elif activation == 'sigmoid':
+            self.act = sigmoid
+            self.gradientAct = gradientSigmoid
+
+    def predict(self, X):
+        self.X = np.matrix(X)
+        self.net = self.X * self.U
+        self.phi = self.act(self.net)
+        if self.bias[1]:
+            self.phi[:, -1] = 1
+        self.y = self.phi * self.W
+        exp_y = np.exp(self.y - np.max(self.y))
+        self.prob = exp_y / np.sum(exp_y)
+        return self.prob
+
+    def learn(self, target):
+        error = np.matrix(target - self.y)
+
+        delta_U = np.asarray(self.W) * self.H.transpose([1, 2, 0])
+        delta_U = np.sum(delta_U, axis=2)
+        self.U += self.stepSize * delta_U
+
+        h_decay = np.asarray(1 - self.stepSize * np.repeat(np.power(self.phi, 2), self.H.shape[1], 0))
+        deltaUij = self.X.T * self.gradientAct(self.phi, self.net)
+        self.H = h_decay * self.H + self.stepSize * np.asarray(error).reshape([-1, 1, 1]) * np.asarray(deltaUij)
+        self.W += self.stepSize * self.phi.T * error
+        return -np.sum(np.multiply(np.log(self.prob), target))

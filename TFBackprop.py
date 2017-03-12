@@ -59,7 +59,7 @@ class BackPropClissification:
         ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target)
         self.loss = tf.reduce_mean(ce_loss)
         self.total_loss = tf.reduce_sum(ce_loss)
-        correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(self.pred, 1))
+        correct_prediction = tf.equal(tf.argmax(self.target, 1), tf.argmax(y, 1))
         self.correct_labels = tf.reduce_sum(tf.cast(correct_prediction, "float"))
         self.all_gradients = optimizer.compute_gradients(self.loss)
         self.train_op = optimizer.apply_gradients(self.all_gradients)
