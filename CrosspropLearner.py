@@ -112,6 +112,28 @@ class CrosspropUtility(BasicLearner):
         self.W += self.stepSize * self.phi.T * error
         return 0.5 * np.sum(np.power(error, 2))
 
+class CrosspropUtilityAlt(BasicLearner):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal',
+                 asOutput=False, use_normal=False, lr_decay_factor=None):
+        BasicLearner.__init__(self, stepSize, dims, bias, activation, init,
+                              asOutput, use_normal, lr_decay_factor)
+
+        self.H = np.zeros(dims[1])
+
+    def learn(self, target, epoch=None):
+        BasicLearner.learn(self, target, epoch)
+        error = target - self.y
+
+        delta_U = np.asarray(self.W).flatten() * self.H * np.asarray(self.X.T * self.gradientAct(self.phi, self.net))
+        self.U += self.stepSize * delta_U
+
+        h_decay = np.asarray(1 - self.stepSize * np.power(self.phi, 2)).flatten()
+        h_delta = np.asarray(error) - np.asarray(self.W).flatten() * np.asarray(self.phi).flatten()
+        self.H = h_decay * self.H + self.stepSize * h_delta
+
+        self.W += self.stepSize * self.phi.T * error
+        return 0.5 * np.sum(np.power(error, 2))
+
 # TODO: refactor classification learner
 class CrossPropLearnerClassification:
     def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):
