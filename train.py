@@ -14,9 +14,10 @@ from BackpropLearner import *
 from DeepBackpropLearner import *
 from DeepCrosspropLearner import *
 from GEOFF import *
+from DynamicGEOFF import *
 import logging
 
-tag = 'utility_tanh_decay_'
+tag = 'tanh_W_mutation'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler('log/%s.txt' % tag)
@@ -29,10 +30,10 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-runs = 1
-epochs = 100
-# labels = ['Backprop', 'Crossprop', 'CrosspropV3']
-labels = ['CrosspropAlt', 'CrosspropUtility', 'Backprop', 'Crossprop']
+runs = 30
+epochs = 150
+labels = ['Backprop', 'Crossprop', 'CrosspropAlt']
+# labels = ['CrosspropUtilityAlt', 'CrosspropAlt', 'CrosspropUtility', 'Backprop', 'Crossprop']
 # labels = ['Backprop']
 
 def test(learner, testX, testY):
@@ -47,13 +48,18 @@ def trainUnitWrapper(args):
 
 def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainErrors, testErrors, UTrack=None, WTrack=None, batchSize=1):
     np.random.seed()
+    GEOFF = DynamicGEOFF(20, 1000, nSample)
     sep = nSample - 500
     for run in range(startRun, endRun):
-        X, Y = data[run]
+        # X, Y = data[run]
+        X, Y = GEOFF.generate(True)
         trainX = np.matrix(X[: sep])
         trainY = np.matrix(Y[: sep]).T
         testX = np.matrix(X[sep:])
         testY = np.matrix(Y[sep:]).T
+        oldTrainY = np.copy(trainY)
+        oldTestY = np.copy(testY)
+
         # dims = [20, learnerFeatures, 50]
         dims = [20, learnerFeatures]
         act = 'tanh'
@@ -61,17 +67,29 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         # act = 'relu'
         # init = 'orthogonal'
         use_norm = False
-        lr_decay = 1.0
+        lr_decay = 0.0
 
         bp = BackpropLearner(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         cp = CrossPropLearner(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         cpAlt = CrossPropLearnerAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         cpUtility = CrosspropUtility(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
-        learners = [cpAlt, cpUtility, bp, cp]
+        cpuAlt = CrosspropUtilityAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
+        # learners = [cpuAlt, cpAlt, cpUtility, bp, cp]
+        learners = [bp, cp, cpAlt]
 
-        for ind in range(len(labels)):
+        for ep in range(epochs):
+            if ep == 50:
+                GEOFF.W_mutate(0.5)
+                # GEOFF.target_feature_size_mutate(4000)
+                _, Y = GEOFF.generate()
+                trainY = np.matrix(Y[: sep]).T
+                testY = np.matrix(Y[sep:]).T
+            if ep == 100:
+                trainY = oldTrainY
+                testY = oldTestY
+
+            for ind in range(len(labels)):
             # print('Run', run, labels[ind], stepSize, learnerFeatures, nSample)
-            for ep in range(epochs):
                 # cur = 0
                 # while (cur < trainX.shape[0]):
                 #     end = min(cur + batchSize, trainX.shape[0])
@@ -91,7 +109,7 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
                     UTrack[ind, run, ep] = U_delta
                 testErrors[ind, run, ep] = test(learners[ind], testX, testY)
                 logger.info('Run %d %s Epoch %d %f' % (run, labels[ind], ep, testErrors[ind, run, ep] / 500))
-    return [trainErrors, testErrors]
+    return [trainErrors, testErrors, UTrack, WTrack]
 
 def train(stepSize, learnerFeatures, nSample):
     trainErrors = np.zeros((len(labels), runs, epochs))
@@ -103,7 +121,7 @@ def train(stepSize, learnerFeatures, nSample):
     fr.close()
 
     logger.info('***%s, %d, %d' % (str(stepSize), learnerFeatures, nSample))
-    nThreads = 4
+    nThreads = 5
     step = runs // nThreads
     startRun = []
     endRun = []
@@ -113,14 +131,16 @@ def train(stepSize, learnerFeatures, nSample):
     endRun[-1] = runs
     args = []
     for i in range(len(startRun)):
-        args.append((data, stepSize, learnerFeatures, nSample, startRun[i], endRun[i], trainErrors, testErrors))
-    # results = Pool(nThreads).map(trainUnitWrapper, args)
-    trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors, UTrack, WTrack)
-    # for trError, teError in results:
-    #     trainErrors += trError
-    #     testErrors += teError
+        args.append((data, stepSize, learnerFeatures, nSample, startRun[i], endRun[i], trainErrors, testErrors, UTrack, WTrack))
+    results = Pool(nThreads).map(trainUnitWrapper, args)
+    # trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors, UTrack, WTrack)
+    for trError, teError, UT, WT in results:
+        trainErrors += trError
+        testErrors += teError
+        UTrack += UT
+        WTrack += WT
 
-    fw = open('tmp/'+tag+str(learnerFeatures)+'_'+str(stepSize)+'_'+str(nSample)+'.bin', 'wb')
+    fw = open('data/%s_%s_%s_%s.bin' % (tag, str(learnerFeatures), str(stepSize), str(nSample)), 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'track': [UTrack, WTrack],
                  'stepSize': stepSize,
@@ -140,17 +160,17 @@ def train(stepSize, learnerFeatures, nSample):
 # train(0.0001, 500, 3500)
 # train(stepSizes[-1], 500, 3500)
 # train(stepSizes[0], learnerFeatures[0], 1500)
-# stepSizes = np.power(2., np.arange(-16, -11))
-stepSizes = [0.001]
-samples = [3500, 6500, 9500]
+stepSizes = np.power(2., np.arange(-16, -11))
+samples = [6500]
+# samples = [3500, 6500, 9500]
 # samples = [12500, 15500, 18500]
-learnerFeatures = [100, 500, 900]
-for lr in stepSizes:
-    for sample in samples:
-        for hidden_unit in learnerFeatures:
-            train(lr, hidden_unit, sample)
+learnerFeatures = [100, 500]
+# for lr in stepSizes:
+#     for sample in samples:
+#         for hidden_unit in learnerFeatures:
+#             train(lr, hidden_unit, sample)
 
-# train(0.01, 500, 3500)
+# train(0.0001, 500, 3500)
 
 # for units in learnerFeatures:
 #     train(stepSizes[1], units, 1500)
