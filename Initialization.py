@@ -20,3 +20,10 @@ def orthogonalInit(dim0, dim1):
         W = V * np.sqrt(2.0)
     return W
 
+def orthogonal_init(dim0, dim1):
+    return orthogonalInit(dim0, dim1)
+
+def normal_init(dim0, dim1):
+    random = np.random.RandomState()
+    return random.randn(dim0, dim1)
+
