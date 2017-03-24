@@ -27,3 +27,23 @@ def sigmoid(net):
 
 def gradientSigmoid(phi, net):
     return phi * (1 - phi)
+
+class Tanh:
+    def __init__(self):
+        self.gate_fun = tanh
+        self.gate_fun_grad = gradientTanh
+
+class Relu:
+    def __init__(self):
+        self.gate_fun = relu
+        self.gate_fun_grad = gradientRelu
+
+class Sigmoid:
+    def __init__(self):
+        self.gate_fun = sigmoid
+        self.gate_fun_grad = gradientSigmoid
+
+class Identity:
+    def __init__(self):
+        self.gate_fun = lambda x: x
+        self.gate_fun_grad = lambda phi, net: np.ones(phi.shape)
