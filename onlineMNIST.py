@@ -28,7 +28,7 @@ test_x, test_y = load_mnist('testing')
 
 dim_in = 28 * 28
 
-train_examples = 1000
+train_examples = 5000
 test_examples = 100
 train_x = train_x[: train_examples, :].reshape([-1, dim_in])
 train_x = np.concatenate((train_x, np.ones((train_examples, 1))), axis=1)
@@ -63,12 +63,14 @@ def train(learning_rate):
             train_acc[method_ind, train_index] = correct_labels
 
             if train_index - window_size >= 0:
-                train_acc[method_ind, train_index] = \
-                    np.mean(train_acc[method_ind, train_index - window_size : train_index])
+                acc = np.mean(train_acc[method_ind, train_index - window_size: train_index])
                 logger.info('%s, %dth example, average accuracy %f' %
-                            (labels[method_ind], train_index, train_acc[method_ind, train_index]))
+                            (labels[method_ind], train_index, acc))
             else:
                 logger.info('%s, %dth example %d' %
                             (labels[method_ind], train_index, correct_labels))
+
+    with open('tmp/%s_%s.bin' % (tag, str(learning_rate)), 'wb') as f:
+        pickle.dump({'acc': train_acc}, f)
 
 train(0.0001)
