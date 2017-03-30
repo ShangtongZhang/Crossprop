@@ -17,7 +17,7 @@ from GEOFF import *
 from DynamicGEOFF import *
 import logging
 
-tag = 'tanh_W_mutation'
+tag = 'cpu_alpha'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler('log/%s.txt' % tag)
@@ -30,9 +30,9 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-runs = 30
+runs = 1
 epochs = 150
-labels = ['Backprop', 'Crossprop', 'CrosspropAlt']
+labels = ['CrosspropUtilityAlpha', 'Backprop', 'Crossprop']
 # labels = ['CrosspropUtilityAlt', 'CrosspropAlt', 'CrosspropUtility', 'Backprop', 'Crossprop']
 # labels = ['Backprop']
 
@@ -74,14 +74,15 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
         cpAlt = CrossPropLearnerAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         cpUtility = CrosspropUtility(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         cpuAlt = CrosspropUtilityAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
+        cpuAlpha = CrosspropUtilityAlpha(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         # learners = [cpuAlt, cpAlt, cpUtility, bp, cp]
-        learners = [bp, cp, cpAlt]
+        learners = [cpuAlpha, bp, cp]
 
         for ep in range(epochs):
             if ep == 50:
                 GEOFF.W_mutate(0.5)
                 # GEOFF.target_feature_size_mutate(4000)
-                _, Y = GEOFF.generate()
+                # _, Y = GEOFF.generate()
                 trainY = np.matrix(Y[: sep]).T
                 testY = np.matrix(Y[sep:]).T
             if ep == 100:
@@ -132,15 +133,15 @@ def train(stepSize, learnerFeatures, nSample):
     args = []
     for i in range(len(startRun)):
         args.append((data, stepSize, learnerFeatures, nSample, startRun[i], endRun[i], trainErrors, testErrors, UTrack, WTrack))
-    results = Pool(nThreads).map(trainUnitWrapper, args)
-    # trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors, UTrack, WTrack)
-    for trError, teError, UT, WT in results:
-        trainErrors += trError
-        testErrors += teError
-        UTrack += UT
-        WTrack += WT
+    # results = Pool(nThreads).map(trainUnitWrapper, args)
+    trainUnit(data, stepSize, learnerFeatures, nSample, 0, 1, trainErrors, testErrors, UTrack, WTrack)
+    # for trError, teError, UT, WT in results:
+    #     trainErrors += trError
+    #     testErrors += teError
+    #     UTrack += UT
+    #     WTrack += WT
 
-    fw = open('data/%s_%s_%s_%s.bin' % (tag, str(learnerFeatures), str(stepSize), str(nSample)), 'wb')
+    fw = open('tmp/%s_%s_%s_%s.bin' % (tag, str(learnerFeatures), str(stepSize), str(nSample)), 'wb')
     pickle.dump({'errors': [trainErrors, testErrors],
                  'track': [UTrack, WTrack],
                  'stepSize': stepSize,
@@ -162,15 +163,15 @@ def train(stepSize, learnerFeatures, nSample):
 # train(stepSizes[0], learnerFeatures[0], 1500)
 stepSizes = np.power(2., np.arange(-16, -11))
 samples = [6500]
+learnerFeatures = [100, 500]
 # samples = [3500, 6500, 9500]
 # samples = [12500, 15500, 18500]
-learnerFeatures = [100, 500]
 # for lr in stepSizes:
 #     for sample in samples:
 #         for hidden_unit in learnerFeatures:
 #             train(lr, hidden_unit, sample)
 
-# train(0.0001, 500, 3500)
+train(0.0001, 500, 3500)
 
 # for units in learnerFeatures:
 #     train(stepSizes[1], units, 1500)

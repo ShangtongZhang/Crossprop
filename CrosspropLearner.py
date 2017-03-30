@@ -134,6 +134,38 @@ class CrosspropUtilityAlt(BasicLearner):
         self.W += self.stepSize * self.phi.T * error
         return 0.5 * np.sum(np.power(error, 2))
 
+class CrosspropUtilityAlpha(BasicLearner):
+    def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal',
+                 asOutput=False, use_normal=False, lr_decay_factor=None, theta=1e-4):
+        BasicLearner.__init__(self, stepSize, dims, bias, activation, init,
+                              asOutput, use_normal, lr_decay_factor)
+        self.m = np.zeros((dims[0], dims[1]))
+        self.h = np.zeros(dims[1])
+        self.beta = np.log(np.ones(dims[1]) * 0.001)
+        self.alpha = np.zeros(dims[1])
+        self.theta = theta
+
+    def learn(self, target, epoch=None):
+        BasicLearner.learn(self, target, epoch)
+        error = np.asscalar(target - self.y)
+
+        self.beta += self.theta * error * self.h * np.asarray(self.phi).flatten()
+        self.alpha = np.exp(self.beta)
+
+        self.W += np.matrix(self.alpha * error * np.asarray(self.phi).flatten()).T
+        self.U += self.stepSize * self.m
+
+        phi_2 = np.asarray(np.power(self.phi, 2)).flatten()
+        m_decay = 1 - self.theta * np.power(self.h, 2) * phi_2
+        m_delta = error * self.h * np.asarray(self.X.T * self.gradientAct(self.phi, self.net))
+        self.m = m_decay * self.m + self.theta * m_delta
+
+        h_decay = 1 - self.alpha * phi_2
+        h_delta = error * self.alpha * np.asarray(self.phi).flatten()
+        self.h = h_decay * self.h + h_delta
+
+        return 0.5 * error * error
+
 # TODO: refactor classification learner
 class CrossPropLearnerClassification:
     def __init__(self, stepSize, dims, bias=[True, True], activation='relu', init='orthogonal'):

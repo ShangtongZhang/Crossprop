@@ -27,7 +27,7 @@ def genDataset(nSample, dims, beta=0.6):
     phi[:, -1] = 1
     for i in range(nSample):
         Y[i] = np.dot(phi[i, :], W) + np.random.randn()
-    return X, Y
+    return X, Y, U, phi, W
 
 if __name__ == '__main__':
     # data = []

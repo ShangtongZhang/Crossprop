@@ -148,6 +148,12 @@ class Tanh:
         self.gate_fun_gradient = \
             lambda phi, net: tf.subtract(1.0, tf.pow(phi, 2))
 
+class Identity:
+    def __init__(self):
+        self.gate_fun = tf.identity
+        self.gate_fun_gradient = \
+            lambda phi, net: tf.ones(tf.shape(phi))
+
 
 class ConvLayers:
     def __init__(self, name, dims, gate, initializer):

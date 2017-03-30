@@ -16,6 +16,8 @@ def getData(hiddenUnits, stepSize, nSample, prefix):
     fr = open(path, 'rb')
     data = pickle.load(fr)
     fr.close()
+    if 'track' in data.keys():
+        return data['errors'] + data['track']
     return data['errors']
 
 # units = [60]
@@ -49,8 +51,20 @@ tag = 'GEOFF_test_'
 yLim = [15, 50]
 
 labels = ['Backprop', 'Crossprop', 'Backprop-Adam', 'Backprop-RMSProp']
+colors = ['b', 'r', 'g', 'y']
 epochs = 200
 runs = 30
+
+units = [100, 500]
+stepSizes = np.power(2., np.arange(-16, -10))
+samples = [6500]
+tag = 'total_tanh_W_mutation_'
+# tag = 'total_tanh_feature_mutation_'
+dataPrefix = tag
+labels = ['Backprop', 'Crossprop', 'CrosspropAlt']
+epochs = 150
+runs = 30
+# yLim = [0, 50]
 
 for nSample in samples:
     nTestExamples = 500
@@ -66,9 +80,11 @@ for nSample in samples:
             data = getData(unit, step, nSample, dataPrefix)
             data2 = getData(unit, step, nSample, dataPrefixAdam)
             data3 = getData(unit, step, nSample, dataPrefixRMS)
-            extraData = [data2, data3]
+            # extraData = [data2, data3]
+            extraData = []
             if data is not None:
-                trainErrors, testErrors = data
+                # trainErrors, testErrors = data
+                trainErrors, testErrors, UTrack, WTrack = data
                 for eData in extraData:
                     if eData is not None:
                         if eData is not None:
@@ -81,6 +97,10 @@ for nSample in samples:
 
                 trainMean = np.mean(trainErrors, 1)
                 testMean = np.mean(testErrors, 1)
+                UTrack = np.mean(UTrack, 1)
+                WTrack = np.mean(WTrack, 1)
+
+                # testErrors = np.add.accumulate(testErrors, axis=1) / (np.arange(epochs) + 1)
 
                 print(unit, nSample, step, testMean[:, -1])
 
@@ -88,26 +108,42 @@ for nSample in samples:
                 testStd = np.std(testErrors, 1) / np.sqrt(runs)
 
                 for i in range(testErrors.shape[0]):
-                    asymptoticError[i].append([testMean[i, -1], stepInd, step, testMean[i, :], testStd[i, :]])
+                    # asymptoticError[i].append([testMean[i, -1], stepInd, step, testMean[i, :], testStd[i, :]])
+                    asymptoticError[i].append([testMean[i, 49], stepInd, step, testMean[i, :], testStd[i, :], UTrack[i, :], WTrack[i, :]])
 
         for i in range(len(labels)):
             asymptoticError[i] = sorted(asymptoticError[i], key=lambda x: x[0])[0]
-        for i in range(len(labels)):
-            if labels[i] == 'Backprop':
-                color = 'b'
-            elif labels[i] == 'Crossprop':
-                color = 'r'
-            elif labels[i] == 'Backprop-Adam':
-                color = 'g'
-            elif labels[i] == 'Backprop-RMSProp':
-                color = 'y'
-            plt.errorbar(np.arange(epochs), asymptoticError[i][3], asymptoticError[i][4], color=color, label=labels[i]+str(asymptoticError[i][2]))
 
-        diff = str(asymptoticError[1][0] - asymptoticError[0][0])
+        for i in range(len(labels)):
+            plt.figure(0)
+            plt.errorbar(np.arange(epochs), asymptoticError[i][3], asymptoticError[i][4], color=colors[i], label=labels[i]+str(asymptoticError[i][2]))
+            # plt.plot(np.arange(epochs), asymptoticError[i][3] * 4, color=colors[i], label=labels[i]+str(asymptoticError[i][2]))
+            plt.figure(1)
+            plt.plot(np.arange(epochs), asymptoticError[i][5], color=colors[i], label=labels[i]+str(asymptoticError[i][2]))
+            plt.figure(2)
+            plt.plot(np.arange(epochs), asymptoticError[i][6], color=colors[i], label=labels[i]+str(asymptoticError[i][2]))
+
+
+        # diff = str(asymptoticError[1][0] - asymptoticError[0][0])
+        plt.figure(0)
         plt.xlabel('Sweep')
         plt.ylabel('Average MSE')
-        plt.ylim(yLim)
-        plt.title(tag+str(unit)+'_'+str(nTrainExamples)+'_'+diff)
+        # plt.ylim(yLim)
+        plt.title(tag+str(unit)+'_'+str(nTrainExamples))
         plt.legend()
         plt.savefig('figure/'+tag+str(unit)+'_'+str(nTrainExamples)+'.png')
+        plt.close()
+
+        plt.figure(1)
+        plt.xlabel('Sweep')
+        plt.title(tag+'U norm'+str(unit)+'_'+str(nTrainExamples))
+        plt.legend()
+        plt.savefig('figure/' + tag + 'UNorm_' + str(unit) + '_' + str(nTrainExamples) + '.png')
+        plt.close()
+
+        plt.figure(2)
+        plt.xlabel('Sweep')
+        plt.title(tag+'W norm'+str(unit)+'_'+str(nTrainExamples))
+        plt.legend()
+        plt.savefig('figure/' + tag + 'WNorm_' + str(unit) + '_' + str(nTrainExamples) + '.png')
         plt.close()

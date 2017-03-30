@@ -7,9 +7,12 @@
 import numpy as np
 import tensorflow as tf
 import pickle
+import logging
 from TFCrossprop import *
 from TFBackprop import *
 from load_mnist import *
+
+
 
 train_x, train_y = load_mnist('training')
 test_x, test_y = load_mnist('testing')

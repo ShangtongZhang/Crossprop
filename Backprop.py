@@ -53,22 +53,14 @@ class SMDLayer(BPLayer):
         self.h = np.zeros(self.W.shape)
         self.epsilon = 1e-4
 
-    def compute_hessian_W_dot_h_col(self, col):
-        delta = self.h[:, col] * self.epsilon
-        self.W[:, col] += delta
-        self.forward(self.x)
-        grad_W_plus = self.compute_grad_W()
-        self.W[:, col] -= 2 * delta
-        self.forward(self.x)
-        grad_W_minus = self.compute_grad_W()
-        hessian_W_dot_h = (grad_W_plus[:, col] - grad_W_minus[:, col]) / (2 * self.epsilon)
-        self.W[:, col] += delta
-        return hessian_W_dot_h
-
     def compute_hessian_W_dot_h(self):
-        hessian_W_dot_h = np.zeros(self.W.shape)
-        for col in range(hessian_W_dot_h.shape[1]):
-            hessian_W_dot_h[:, col] = self.compute_hessian_W_dot_h_col(col)
+        delta = self.h * self.epsilon
+        self.W += delta
+        grad_W_plus = self.compute_grad_W()
+        self.W -= 2 * delta
+        grad_W_minus = self.compute_grad_W()
+        self.W += delta
+        hessian_W_dot_h = (grad_W_plus - grad_W_minus) / (2 * self.epsilon)
         return hessian_W_dot_h
 
     def update(self):
