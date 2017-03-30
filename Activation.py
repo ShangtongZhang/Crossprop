@@ -32,18 +32,22 @@ class Tanh:
     def __init__(self):
         self.gate_fun = tanh
         self.gate_fun_grad = gradientTanh
+        self.name = 'tanh'
 
 class Relu:
     def __init__(self):
         self.gate_fun = relu
         self.gate_fun_grad = gradientRelu
+        self.name = 'relu'
 
 class Sigmoid:
     def __init__(self):
         self.gate_fun = sigmoid
         self.gate_fun_grad = gradientSigmoid
+        self.name = 'sigmoid'
 
 class Identity:
     def __init__(self):
         self.gate_fun = lambda x: x
         self.gate_fun_grad = lambda phi, net: np.ones(phi.shape)
+        self.name = 'identity'
