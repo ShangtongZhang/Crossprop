@@ -71,12 +71,13 @@ def trainUnit(data, stepSize, learnerFeatures, nSample, startRun, endRun, trainE
 
         bp = BackpropLearner(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         cp = CrossPropLearner(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
-        cpAlt = CrossPropLearnerAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
-        cpUtility = CrosspropUtility(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
-        cpuAlt = CrosspropUtilityAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
-        cpuAlpha = CrosspropUtilityAlpha(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
+        # cpAlt = CrossPropLearnerAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
+        # cpUtility = CrosspropUtility(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
+        # cpuAlt = CrosspropUtilityAlt(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
+        # cpuAlpha = CrosspropUtilityAlpha(stepSize, list(dims), init=init, activation=act, use_normal=use_norm, lr_decay_factor=lr_decay)
         # learners = [cpuAlt, cpAlt, cpUtility, bp, cp]
-        learners = [cpuAlpha, bp, cp]
+        # learners = [cpuAlpha, bp, cp]
+        learners = [bp, cp]
 
         for ep in range(epochs):
             if ep == 50:

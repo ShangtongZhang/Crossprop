@@ -12,8 +12,6 @@ from TFCrossprop import *
 from TFBackprop import *
 from load_mnist import *
 
-
-
 train_x, train_y = load_mnist('training')
 test_x, test_y = load_mnist('testing')
 
@@ -25,9 +23,9 @@ dim_hidden = 1024
 dim_out = 10
 
 train_x = np.matrix(train_x.reshape([-1, dim_in])) / 255.0
-train_y = np.matrix(dense_to_one_hot(train_y))
+train_y = np.matrix(train_y)
 test_x = np.matrix(test_x.reshape([-1, dim_in])) / 255.0
-test_y = np.matrix(dense_to_one_hot(test_y))
+test_y = np.matrix(test_y)
 
 train_examples = 1000
 test_examples = 100
@@ -37,7 +35,7 @@ test_x = test_x[: test_examples, :]
 test_y = test_y[: test_examples, :]
 
 labels = ['cp', 'bp']
-labels = ['cp']
+# labels = ['cp']
 initialzer = tf.random_normal_initializer()
 # initialzer = tf.ones_initializer()
 cp = CrossPropClassification(dim_in, dim_hidden, dim_out, learning_rate, gate=Tanh(), initializer=initialzer)

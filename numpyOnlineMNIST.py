@@ -8,8 +8,7 @@ import numpy as np
 import pickle
 import logging
 from load_mnist import *
-# from Backprop import *
-from TFSMD import *
+from Backprop import *
 
 tag = 'online_MNIST'
 logger = logging.getLogger(__name__)
@@ -32,10 +31,10 @@ dim_in = 28 * 28
 train_examples = 5000
 test_examples = 100
 train_x = train_x[: train_examples, :].reshape([-1, dim_in])
-# train_x = np.concatenate((train_x, np.ones((train_examples, 1))), axis=1)
+train_x = np.concatenate((train_x, np.ones((train_examples, 1))), axis=1)
 train_y = train_y[: train_examples, :]
 test_x = test_x[: test_examples, :].reshape([-1, dim_in])
-# test_x = np.concatenate((test_x, np.ones((test_examples, 1))), axis=1)
+test_x = np.concatenate((test_x, np.ones((test_examples, 1))), axis=1)
 test_y = test_y[: test_examples, :]
 
 train_x = np.asarray(train_x)
@@ -44,43 +43,34 @@ test_x = np.asarray(test_x)
 test_y = np.asarray(test_y)
 
 dims = [dim_in, 1024, 10]
-# labels = ['SMD', 'BP']
-# labels = ['TFSMD', 'SMD']
-labels = ['BP', 'SMD']
+labels = ['SMD', 'BP']
 window_size = 0
 
 train_acc = np.zeros((len(labels), train_examples))
 
 def train(learning_rate):
     # init_fn = orthogonal_init
+    init_fn = normal_init
     gate_type = Relu
     # gate_type = Tanh
-    # smd = Backprop(dims, learning_rate, gate_type, SMDLayer, init_fn)
-    # bp = Backprop(dims, learning_rate, gate_type, BPLayer, init_fn)
-    tf_smd = TFSMD(dims, learning_rate, tf.random_normal_initializer(), Relu, 'SMD')
-    tf_bp = TFBP(dims, learning_rate, tf.random_normal_initializer(), Relu, 'BP')
-    # methods = [smd, bp]
-    # methods = [tf_smd]
-    methods = [tf_bp, tf_smd]
-    init = tf.global_variables_initializer()
-    with tf.Session() as sess:
-        sess.run(init)
-        for train_index in range(len(train_x)):
-            for method_ind in range(len(methods)):
-                method = methods[method_ind]
-                x = train_x[train_index, :].reshape(1, -1)
-                y = train_y[train_index, :].reshape(1, -1)
-                correct_labels = method.train(sess, x, y)
-                # correct_labels = method.train(x, y)
-                train_acc[method_ind, train_index] = correct_labels
+    smd = Backprop(dims, learning_rate, gate_type, SMDLayer, init_fn)
+    bp = Backprop(dims, learning_rate, gate_type, BPLayer, init_fn)
+    methods = [smd, bp]
+    for train_index in range(len(train_x)):
+        for method_ind in range(len(methods)):
+            method = methods[method_ind]
+            x = train_x[train_index, :].reshape(1, -1)
+            y = train_y[train_index, :].reshape(1, -1)
+            correct_labels = method.train(x, y)
+            train_acc[method_ind, train_index] = correct_labels
 
-                if train_index - window_size >= 0:
-                    # acc = np.mean(train_acc[method_ind, train_index - window_size: train_index])
-                    acc = np.mean(train_acc[method_ind, :train_index])
-                    logger.info('%s, %dth example, average accuracy %f' %
-                                (labels[method_ind], train_index, acc))
-                else:
-                    logger.info('%s, %dth example %d' %
+            if train_index - window_size >= 0:
+                # acc = np.mean(train_acc[method_ind, train_index - window_size: train_index])
+                acc = np.mean(train_acc[method_ind, :train_index])
+                logger.info('%s, %dth example, average accuracy %f' %
+                            (labels[method_ind], train_index, acc))
+            else:
+                logger.info('%s, %dth example %d' %
                             (labels[method_ind], train_index, correct_labels))
 
     with open('tmp/%s_%s_%s.bin' % (tag, gate_type().name, str(learning_rate)), 'wb') as f:
