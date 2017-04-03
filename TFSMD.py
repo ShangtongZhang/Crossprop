@@ -11,32 +11,33 @@ from TFCommon import *
 class TFSMDLayer:
     def __init__(self, x, dim_in, dim_out, gate, learning_rate, initializer, name):
         self.leaning_rate = learning_rate
-        # self.epsilon = 1e-4
-        self.epsilon = 0.1
+        self.epsilon = 1e-4
+        # self.epsilon = 0.1
         self.name = name
         with tf.variable_scope(name):
             self.W = tf.get_variable('W', [dim_in, dim_out], initializer=initializer)
             self.alpha_W = tf.get_variable('alpha_W', [dim_in, dim_out],
                                            initializer=tf.random_normal_initializer(
-                                               mean=0.0, stddev=learning_rate, seed=0
-                                                # mean=0.0, stddev=learning_rate
+                                               # mean=0.0, stddev=learning_rate, seed=0
+                                                mean=0.0, stddev=learning_rate
                                            ))
+                                           # initializer=tf.zeros_initializer())
             self.alpha_W_decay = tf.get_variable('alpha_W_decay', [dim_in, dim_out],
                                                  initializer=tf.zeros_initializer())
-            # self.h_W = tf.get_variable('h_W', [dim_in, dim_out], initializer=tf.zeros_initializer())
-            self.h_W = tf.get_variable('h_W', [dim_in, dim_out], initializer=initializer)
+            self.h_W = tf.get_variable('h_W', [dim_in, dim_out], initializer=tf.zeros_initializer())
+            # self.h_W = tf.get_variable('h_W', [dim_in, dim_out], initializer=initializer)
             self.h_W_delta = tf.get_variable('h_W_delta', [dim_in, dim_out],
                                              initializer=tf.zeros_initializer())
             self.b = tf.get_variable('b', [dim_out], initializer=initializer)
             self.alpha_b = tf.get_variable('alpha_b', [dim_out],
                                            initializer=tf.random_normal_initializer(
-                                               mean=0.0, stddev=learning_rate, seed=0
-                                                # mean=0.0, stddev=learning_rate
+                                               # mean=0.0, stddev=learning_rate, seed=0
+                                                mean=0.0, stddev=learning_rate
                                            ))
             self.alpha_b_decay = tf.get_variable('alpha_b_decay', [dim_out],
                                                  initializer=tf.zeros_initializer())
-            # self.h_b = tf.get_variable('h_b', [dim_out], initializer=tf.zeros_initializer())
-            self.h_b = tf.get_variable('h_b', [dim_out], initializer=initializer)
+            self.h_b = tf.get_variable('h_b', [dim_out], initializer=tf.zeros_initializer())
+            # self.h_b = tf.get_variable('h_b', [dim_out], initializer=initializer)
             self.h_b_delta = tf.get_variable('h_b_delta', [dim_out],
                                              initializer=tf.zeros_initializer())
 
@@ -96,19 +97,29 @@ class TFSMDLayer:
 
     def update(self, sess, feed_dict):
         # print sess.run(self.W)
-        _, W_plus = sess.run([self.W_plus_op, self.W_grad], feed_dict=feed_dict)
+        sess.run(self.W_plus_op)
+        W_plus = sess.run(self.W_grad, feed_dict=feed_dict)
+        # _, W_plus = sess.run([self.W_plus_op, self.W_grad], feed_dict=feed_dict)
         # print sess.run(self.W)
-        _, W_minus = sess.run([self.W_minus_op, self.W_grad], feed_dict=feed_dict)
+        sess.run(self.W_minus_op)
+        W_minus = sess.run(self.W_grad, feed_dict=feed_dict)
+        # _, W_minus = sess.run([self.W_minus_op, self.W_grad], feed_dict=feed_dict)
         # print sess.run(self.W)
         sess.run(self.W_restore_op, feed_dict=feed_dict)
         # print sess.run(self.W)
         hessian_W_h_W = (W_plus - W_minus) / (2 * self.epsilon)
-        _, b_plus = sess.run([self.b_plus_op, self.b_grad], feed_dict=feed_dict)
-        _, b_minus = sess.run([self.b_minus_op, self.b_grad], feed_dict=feed_dict)
+        # print 'hessian * h', hessian_W_h_W
+        sess.run(self.b_plus_op)
+        b_plus = sess.run(self.b_grad, feed_dict=feed_dict)
+        # _, b_plus = sess.run([self.b_plus_op, self.b_grad], feed_dict=feed_dict)
+        sess.run(self.b_minus_op)
+        b_minus = sess.run(self.b_grad, feed_dict=feed_dict)
+        # _, b_minus = sess.run([self.b_minus_op, self.b_grad], feed_dict=feed_dict)
         sess.run(self.b_restore_op, feed_dict=feed_dict)
         hessian_b_h_b = (b_plus - b_minus) / (2 * self.epsilon)
         feed_dict[self.hessian_W_h_W] = hessian_W_h_W
         feed_dict[self.hessian_b_h_b] = hessian_b_h_b
+        # print 'grad_W', sess.run(self.W_grad, feed_dict=feed_dict)
         # print 'W', sess.run(self.W)
         # print 'alpha_W', sess.run(self.alpha_W)
         # print 'grad_W', sess.run(self.W_grad, feed_dict=feed_dict)
@@ -123,21 +134,20 @@ class TFSMDLayer:
         # sess.run(self.update_h_b_op, feed_dict=feed_dict)
         # sess.run(self.update_b_op, feed_dict=feed_dict)
         # sess.run(self.update_alpha_b_op, feed_dict=feed_dict)
-        ops = [self.pre_update_alpha_W_op, self.pre_update_h_W_op,
-               self.update_h_W_op, self.update_W_op, self.update_alpha_W_op,
-               self.pre_update_alpha_b_op, self.pre_update_h_b_op,
-               self.update_h_b_op, self.update_b_op, self.update_alpha_b_op]
+        ops = [self.pre_update_alpha_W_op, self.update_alpha_W_op,
+               self.pre_update_h_W_op, self.update_W_op, self.update_h_W_op,
+               self.pre_update_alpha_b_op, self.update_alpha_b_op,
+               self.pre_update_h_b_op, self.update_b_op, self.update_h_b_op]
         for op in ops:
             sess.run(op, feed_dict=feed_dict)
-        # print 'grad_W', sess.run(self.W_grad, feed_dict=feed_dict)
-        print 'alpha_W', sess.run(self.alpha_W)
+        # print 'alpha_W', sess.run(self.alpha_W)
         # print 'h_W_delta', sess.run(self.h_W_delta)
         # print 'alpha_W_decay', sess.run(self.alpha_W_decay)
         # print 'alpha_W', sess.run(self.alpha_W)
         # print 'h_W_delta', sess.run(self.h_W_delta)
-        print 'h_W', sess.run(self.h_W)
-        print 'W', sess.run(self.W)
-        print ''
+        # print 'h_W', sess.run(self.h_W)
+        # print 'W', sess.run(self.W)
+        # print ''
 
 class TFSMD:
     def __init__(self, dims, learning_rate, initializer, gate_type, name):
@@ -178,7 +188,7 @@ class TFSMD:
             self.x: train_x,
             self.target: train_y
         })
-        # l = self.layers[0]
+        l = self.layers[0]
         # print 'x', train_x
         # print 'y', train_y
         # print 'W', sess.run(l.W)
@@ -197,3 +207,31 @@ class TFSMD:
         for layer in self.layers:
             layer.update(sess, feed_dict)
         return result
+
+class TFBP:
+    def __init__(self, dims, learning_rate, initializer, gate_type, name):
+        x = tf.placeholder(tf.float32, shape=(None, dims[0]))
+        target = tf.placeholder(tf.float32, shape=(None, dims[2]))
+        W1 = tf.get_variable('W1', [dims[0], dims[1]], initializer=initializer)
+        b1 = tf.get_variable('b1', dims[1], initializer=initializer)
+        W2 = tf.get_variable('W2', [dims[1], dims[2]], initializer=initializer)
+        b2 = tf.get_variable('b2', dims[2], initializer=initializer)
+        net1 = tf.nn.bias_add(tf.matmul(x, W1), b1)
+        phi1 = gate_type().gate_fun(net1)
+        net2 = tf.nn.bias_add(tf.matmul(phi1, W2), b2)
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=net2, labels=target))
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        self.train_op = optimizer.minimize(loss)
+        pred = tf.nn.softmax(net2)
+        correct_prediction = tf.equal(tf.argmax(target, 1), tf.argmax(pred, 1))
+        self.correct_labels = tf.reduce_sum(tf.cast(correct_prediction, "float"))
+        self.x = x
+        self.target = target
+
+    def train(self, sess, train_x, train_y):
+        feed_dict = {
+            self.x: train_x,
+            self.target: train_y
+        }
+        _, results = sess.run([self.train_op, self.correct_labels], feed_dict=feed_dict)
+        return results

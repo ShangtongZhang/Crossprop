@@ -51,9 +51,9 @@ class BackPropClissification:
             optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
-        _, __, ___, phi = \
+        U, __, ___, phi = \
             fully_connected('backprop', 'fully_connected_layer1', var_in, dim_in, dim_hidden, initializer, gate.gate_fun)
-        _, __, ___, y = \
+        W, __, ___, y = \
             fully_connected('backprop', 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
         self.pred = tf.nn.softmax(y)
         ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target)
@@ -64,6 +64,8 @@ class BackPropClissification:
         self.all_gradients = optimizer.compute_gradients(self.loss)
         self.train_op = optimizer.apply_gradients(self.all_gradients)
         self.other_info = [self.total_loss, self.correct_labels]
+        self.U = U
+        self.W = W
 
     def train(self, sess, train_x, train_y):
         _, total_loss, correct_labels = \

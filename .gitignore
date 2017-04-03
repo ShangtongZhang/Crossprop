@@ -11,6 +11,8 @@ tfTrainMNISTSingle.py
 upload.py
 cifar10
 log
+debug*
+*draw*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

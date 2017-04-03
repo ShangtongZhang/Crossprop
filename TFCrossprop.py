@@ -142,6 +142,8 @@ class CrossPropClassification:
         self.train_op = optimizer.apply_gradients(self.all_gradients)
         self.h_var = np.zeros((dim_hidden, dim_out))
         self.other_info = [self.total_loss, self.correct_labels, self.h_decay, self.h_delta]
+        self.U = U
+        self.W = W
 
     def train(self, sess, train_x, train_y):
         _, total_loss, correct_labels, h_decay_var, h_delta_var = \

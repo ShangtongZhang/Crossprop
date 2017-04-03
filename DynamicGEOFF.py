@@ -14,6 +14,9 @@ class DynamicGEOFF:
         self.n_target_feature = n_target_feature + 1
         self.n_examples = n_examples
 
+    def reset_X(self):
+        self.X = None
+
     def generate(self, reset=False):
         if reset or (self.X is None):
             X = np.random.rand(self.n_examples, self.input_dim)
