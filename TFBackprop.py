@@ -4,26 +4,28 @@ from TFCommon import *
 
 class BackPropRegression:
     def __init__(self, dim_in, dim_hidden, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer(), optimizer=None):
+                 initializer=tf.random_normal_initializer(), optimizer=None, name='BP'):
         dim_out = 1
         if optimizer is None:
             optimizer = tf.train.GradientDescentOptimizer(learning_rate)
         self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
-        _, __, ___, phi = \
-            fully_connected('backprop', 'fully_connected_layer1', self.x, dim_in, dim_hidden, initializer, gate.gate_fun)
-        _, __, ___, y = \
-            fully_connected('backprop', 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
+        U, __, ___, phi = \
+            fully_connected(name, 'fully_connected_layer1', self.x, dim_in, dim_hidden, initializer, gate.gate_fun)
+        W, __, ___, y = \
+            fully_connected(name, 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
         self.loss = tf.scalar_mul(0.5, tf.reduce_mean(tf.squared_difference(y, self.target)))
         self.all_gradients = optimizer.compute_gradients(self.loss)
         self.train_op = optimizer.apply_gradients(self.all_gradients)
+        self.outgoing_weight = W
+        self.feature_matrix = U
 
     def train(self, sess, train_x, train_y):
         _, loss = sess.run([self.train_op, self.loss], feed_dict={
             self.x: train_x,
             self.target: train_y
         })
-        return loss
+        return [loss]
 
     def test(self, sess, test_x, test_y):
         return sess.run(self.loss, feed_dict={
@@ -33,7 +35,8 @@ class BackPropRegression:
 
 class BackPropClissification:
     def __init__(self, dim_in, dim_hidden, dim_out, learning_rate, gate=Relu(),
-                 initializer=tf.random_normal_initializer(), bottom_layer=None, optimizer=None):
+                 initializer=tf.random_normal_initializer(), bottom_layer=None,
+                 optimizer=None, name='BP'):
         if bottom_layer is None:
             self.x = tf.placeholder(tf.float32, shape=(None, dim_in))
             var_in = self.x
@@ -46,9 +49,9 @@ class BackPropClissification:
 
         self.target = tf.placeholder(tf.float32, shape=(None, dim_out))
         U, __, ___, phi = \
-            fully_connected('backprop', 'fully_connected_layer1', var_in, dim_in, dim_hidden, initializer, gate.gate_fun)
+            fully_connected(name, 'fully_connected_layer1', var_in, dim_in, dim_hidden, initializer, gate.gate_fun)
         W, __, ___, y = \
-            fully_connected('backprop', 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
+            fully_connected(name, 'fully_connected_layer2', phi, dim_hidden, dim_out, initializer, tf.identity)
         self.pred = tf.nn.softmax(y)
         ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=self.target)
         self.loss = tf.reduce_mean(ce_loss)
@@ -58,8 +61,8 @@ class BackPropClissification:
         self.all_gradients = optimizer.compute_gradients(self.loss)
         self.train_op = optimizer.apply_gradients(self.all_gradients)
         self.other_info = [self.total_loss, self.correct_labels]
-        self.U = U
-        self.W = W
+        self.outgoing_weight = W
+        self.feature_matrix = U
 
     def train(self, sess, train_x, train_y):
         _, total_loss, correct_labels = \
@@ -68,7 +71,7 @@ class BackPropClissification:
                          self.x: train_x,
                          self.target: train_y
                      })
-        return total_loss, correct_labels
+        return [total_loss, correct_labels]
 
     def test(self, sess, test_x, test_y):
         return sess.run([self.total_loss, self.correct_labels], feed_dict={
