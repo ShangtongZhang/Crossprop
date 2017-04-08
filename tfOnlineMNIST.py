@@ -6,7 +6,7 @@ from TFBackprop import *
 from TFCrossprop import *
 from load_mnist import *
 
-tag = 'tf_online_MNIST'
+tag = 'tf_online_MNIST_perm'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler('log/%s.txt' % tag)
@@ -60,13 +60,24 @@ def train(learning_rate, n_examples):
         train_x = train_x_total[:n_examples, :]
         train_y = train_y_total[:n_examples, :]
 
-        y0 = train_y
-        y1 = np.concatenate([train_y[:, 1:], train_y[:, :1]], 1)
-        y2 = np.concatenate([y1[:, 1:], y1[:, :1]], 1)
+        # y0 = train_y
+        # y1 = np.concatenate([train_y[:, 1:], train_y[:, :1]], 1)
+        # y2 = np.concatenate([y1[:, 1:], y1[:, :1]], 1)
+        #
+        # train_xs = [train_x] * 6
+        # train_ys = [y0, y1, y2, y0, y1, y2]
 
-        train_xs = [train_x] * 6
-        train_ys = [y0, y1, y2, y0, y1, y2]
+        x0 = train_x
+        perm = np.arange(dim_in)
+        np.random.shuffle(perm)
+        x1 = train_x[:, perm]
+        np.random.shuffle(perm)
+        x2 = train_x[:, perm]
 
+        train_xs = [x0, x1, x2, x0, x1, x2]
+        train_ys = [train_y] * 6
+
+        features = np.zeros((stages, len(methods), n_examples, dim_hidden))
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             for method in methods:
@@ -88,14 +99,29 @@ def train(learning_rate, n_examples):
                         train_error[method_ind, run, index] = error
                         logger.info('run %d, stage %d, example %d, %s, error %f' %
                                     (run, stage, example_ind, labels[method_ind], error))
+                batch_size = 100
+                cur_example = 0
+                while cur_example < n_examples:
+                    logger.info('store features... stage %d, example %d' % (stage, cur_example))
+                    end_example = min(n_examples, cur_example + batch_size)
+                    for method_ind, method in enumerate(methods):
+                        cur_features = sess.run(method.feature, feed_dict={
+                            method.x: train_x[cur_example: end_example, :],
+                            method.target: train_y[cur_example: end_example, :]
+                        })
+                        features[stage, method_ind, cur_example: end_example, :] = cur_features
+                    cur_example = end_example
+
+
 
     file_path = 'tmp/%s_%s.bin' % (tag, str(learning_rate))
     with open(file_path, 'wb') as f:
         pickle.dump({'error': train_error,
                      'outgoing_weight_track': outgoing_weight_track,
-                     'feature_matrix_track': feature_matrix_track
+                     'feature_matrix_track': feature_matrix_track,
+                     'features': features,
+                     'train_y': train_y
                      }, f)
-    return train_error
 
 step_sizes = [0.0005]
 for step_size in step_sizes:

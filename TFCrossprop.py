@@ -188,6 +188,7 @@ class CrossPropAlt:
         self.other_info = [self.total_loss, self.correct_labels, self.h_decay, self.h_delta]
         self.outgoing_weight = W
         self.feature_matrix = U
+        self.feature = phi
 
     def train(self, sess, train_x, train_y):
         _, total_loss, correct_labels, h_decay_var, h_delta_var = \
