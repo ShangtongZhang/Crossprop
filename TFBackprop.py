@@ -43,6 +43,7 @@ class BackPropClissification:
         else:
             self.x = bottom_layer.x
             var_in = bottom_layer.var_out
+            self.bottom_layer = bottom_layer
 
         if optimizer is None:
             optimizer = tf.train.GradientDescentOptimizer(learning_rate)

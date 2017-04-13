@@ -13,6 +13,7 @@ cifar10
 log
 debug*
 *draw*
+tmp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
