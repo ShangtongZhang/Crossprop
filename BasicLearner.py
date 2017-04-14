@@ -13,12 +13,20 @@ from Initialization import *
 
 class BasicLearner:
     def __init__(self, stepSize, dims, bias, activation,
-                 init, asOutput, use_norm, lr_decay_factor):
+                 init, asOutput, use_norm, lr_decay_factor, step_size_W, step_size_U):
         self.stepSize = stepSize
         self.asOutput = asOutput
         self.bias = bias
         dims[0] += int(bias[0])
         dims[1] += int(bias[1])
+
+        if step_size_W is None:
+            self.step_size_W = stepSize
+        if step_size_U is None:
+            self.step_size_U = stepSize
+
+        self.step_size_W = step_size_W
+        self.step_size_U = step_size_U
 
         if init == 'orthogonal':
             self.U = np.matrix(orthogonalInit(dims[0], dims[1]))

@@ -15,9 +15,9 @@ from Initialization import *
 class CrossPropLearner(BasicLearner):
     def __init__(self, stepSize, dims, bias=[True, True],
                  activation='relu', init='orthogonal', asOutput=False,
-                 use_normal=False, lr_decay_factor=None):
+                 use_normal=False, lr_decay_factor=None, step_size_W=None, step_size_U=None):
         BasicLearner.__init__(self, stepSize, dims, bias, activation, init, asOutput,
-                              use_normal, lr_decay_factor)
+                              use_normal, lr_decay_factor, step_size_W, step_size_U)
 
         self.H = np.matrix(np.zeros((dims[0], dims[1])))
 
@@ -27,19 +27,19 @@ class CrossPropLearner(BasicLearner):
         error = target - self.y
         phi = np.asarray(np.matrix(np.diag(error.flat)) * self.phi)
         wDelta = np.mean(phi, axis=0)
-        self.W += self.stepSize * np.matrix(wDelta).T
+        self.W += self.step_size_W * np.matrix(wDelta).T
 
         phi = np.repeat(phi, self.U.shape[0], 0).reshape((-1, self.U.shape[0], self.U.shape[1]))
         phi = np.matrix(np.mean(phi, axis=0))
         uDelta = np.multiply(phi, self.H)
-        self.U += self.stepSize * uDelta
+        self.U += self.step_size_U * uDelta
 
-        hDecay = np.asarray(1 - self.stepSize * np.power(self.phi, 2))
+        hDecay = np.asarray(1 - self.step_size_W * np.power(self.phi, 2))
         hDecay = np.repeat(hDecay, self.U.shape[0], 0).reshape((-1, self.U.shape[0], self.U.shape[1]))
         hDecay = np.matrix(np.mean(hDecay, axis=0))
         hDelta = self.X.T * np.matrix(np.diag(error.flat)) * \
                  self.gradientAct(self.phi, self.net) / self.X.shape[0]
-        self.H = np.multiply(self.H, hDecay) + self.stepSize * hDelta
+        self.H = np.multiply(self.H, hDecay) + self.step_size_W * hDelta
 
         errorPhi = -error * self.W.T
         errorNet = np.multiply(errorPhi, self.gradientAct(self.phi, self.net))
@@ -55,9 +55,9 @@ class CrossPropLearner(BasicLearner):
 class CrossPropLearnerAlt(BasicLearner):
     def __init__(self, stepSize, dims, bias=[True, True], activation='relu',
                  init='orthogonal', asOutput=False, use_normal=False,
-                 lr_decay_factor=None):
+                 lr_decay_factor=None, step_size_W=None, step_size_U=None):
         BasicLearner.__init__(self, stepSize, dims, bias, activation, init,
-                              asOutput, use_normal, lr_decay_factor)
+                              asOutput, use_normal, lr_decay_factor, step_size_W, step_size_U)
 
         self.H = np.matrix(np.zeros((dims[1], 1)))
 
@@ -72,14 +72,14 @@ class CrossPropLearnerAlt(BasicLearner):
         phi_phi_grad[:, -1] = 0
         gradientU = self.X.T * phi_phi_grad
 
-        h_decay = 1 - self.stepSize * np.power(self.phi, 2)
+        h_decay = 1 - self.step_size_W * np.power(self.phi, 2)
         h_decay = np.repeat(h_decay, self.H.shape[1], 0).T
 
         h_gradient = np.repeat(error, self.H.shape[0], 0)
 
-        self.W -= self.stepSize * gradientW
-        self.U -= self.stepSize * gradientU
-        self.H = np.multiply(h_decay, self.H) - self.stepSize * h_gradient
+        self.W -= self.step_size_W * gradientW
+        self.U -= self.step_size_U * gradientU
+        self.H = np.multiply(h_decay, self.H) - self.step_size_W * h_gradient
 
         if self.asOutput:
             errorPhi = error * self.W.T
