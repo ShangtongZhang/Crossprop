@@ -16,19 +16,19 @@ from GradientAdjuster import *
 class BackpropLearner(BasicLearner):
     def __init__(self, stepSize, dims, bias=[True, True], activation='relu',
                  init='orthogonal', gradient='', asOutput=False,
-                 use_normal=False, lr_decay_factor=None):
+                 use_normal=False, lr_decay_factor=None, step_size_W=None, step_size_U=None):
         BasicLearner.__init__(self, stepSize, dims, bias, activation, init, asOutput,
-                              use_normal, lr_decay_factor)
+                              use_normal, lr_decay_factor, step_size_W, step_size_U)
 
         if gradient == 'adam':
-            self.WAdjustor = AdamGradientAdjuster(self.stepSize)
-            self.UAdjustor = AdamGradientAdjuster(self.stepSize)
+            self.WAdjustor = AdamGradientAdjuster(self.step_size_W)
+            self.UAdjustor = AdamGradientAdjuster(self.step_size_U)
         elif gradient == 'RMSProp':
-            self.WAdjustor = RMSPropGradientAdjuster(self.stepSize)
-            self.UAdjustor = RMSPropGradientAdjuster(self.stepSize)
+            self.WAdjustor = RMSPropGradientAdjuster(self.step_size_W)
+            self.UAdjustor = RMSPropGradientAdjuster(self.step_size_U)
         else:
-            self.WAdjustor = GradientAdjuster(self.stepSize)
-            self.UAdjustor = GradientAdjuster(self.stepSize)
+            self.WAdjustor = GradientAdjuster(self.step_size_W)
+            self.UAdjustor = GradientAdjuster(self.step_size_U)
 
     def getGradient(self, error):
         gradientW = -np.matrix(np.diag(error.flat)) * self.phi
@@ -48,8 +48,9 @@ class BackpropLearner(BasicLearner):
 
     def learn(self, target, epoch=None):
         BasicLearner.learn(self, target, epoch)
-        self.WAdjustor.stepSize = self.stepSize
-        self.UAdjustor.stepSize = self.stepSize
+        if self.stepSize is not None:
+            self.WAdjustor.stepSize = self.stepSize
+            self.UAdjustor.stepSize = self.stepSize
 
         self.target = target
         error = target - self.y

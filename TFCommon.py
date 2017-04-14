@@ -156,7 +156,7 @@ class Identity:
 
 
 class ConvLayers:
-    def __init__(self, name, dims, gate, initializer):
+    def __init__(self, name, dims, gate, initializer=tf.random_normal_initializer()):
         n1, n2, d0, f1, d1, f2, d2 = dims
         self.x = tf.placeholder(tf.float32, shape=(None, n1, n2, d0))  # input
         # layer 1: conv
@@ -180,3 +180,6 @@ class ConvLayers:
 
         self.var_out = y_hat_2
         self.trainable_vars = [W_1, b_1, W_2, b_2]
+
+        self.conv_kernel1 = W_1
+        self.conv_kernel2 = W_2

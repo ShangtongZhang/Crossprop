@@ -5,8 +5,10 @@ from DynamicGEOFF import *
 from TFBackprop import *
 from TFCrossprop import *
 from load_mnist import *
+from tsne import *
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
-# tag = 'tf_online_MNIST_perm'
 tag = 'tf_online_MNIST_shift'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -30,11 +32,9 @@ train_x_total = train_x_total.reshape([-1, dim_in])
 train_y_total = train_y_total.reshape([-1, 10])
 
 labels = ['CP-ALT', 'CP-ALT-lambda', 'BP', 'BP-adam', 'BP-rms', 'BP-mom']
-# labels = ['CP', 'CP-lambda', 'CP-ALT', 'CP-ALT-lambda', 'BP']
-def train(learning_rate, n_examples):
+def draw(learning_rate, n_examples, repeats):
     gate = Tanh()
     runs = 1
-    stages = 6
     cp_alt = CrossPropAlt(dim_in, dim_hidden, dim_out, learning_rate, gate,
                       output_layer='CE', lam=0, name='cp')
     cp_alt_lam = CrossPropAlt(dim_in, dim_hidden, dim_out, learning_rate, gate,
@@ -50,13 +50,7 @@ def train(learning_rate, n_examples):
     bp_rms = BackPropClissification(dim_in, dim_hidden, dim_out, learning_rate, gate, name='bp-rms',
                                     optimizer=tf.train.RMSPropOptimizer(learning_rate=learning_rate))
     methods = [cp_alt, cp_alt_lam, bp, bp_adam, bp_rms, bp_mom]
-    # methods = [cp, cp_lam, cp_alt, cp_alt_lam, bp]
-    train_error = np.zeros((len(methods), runs, stages * n_examples))
-    outgoing_weight_track = np.zeros(train_error.shape)
-    feature_matrix_track = np.zeros(train_error.shape)
     for run in range(runs):
-        initial_outgoing_weight = []
-        initial_feature_matrix = []
 
         train_x = train_x_total[:n_examples, :]
         train_y = train_y_total[:n_examples, :]
@@ -80,41 +74,51 @@ def train(learning_rate, n_examples):
         # train_ys = [train_y] * 6
 
         # features = np.zeros((stages, len(methods), n_examples, dim_hidden))
-        saver = tf.train.Saver(max_to_keep=10)
+        saver = tf.train.Saver()
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            for method in methods:
-                initial_outgoing_weight.append(sess.run(method.outgoing_weight))
-                initial_feature_matrix.append(sess.run(method.feature_matrix))
-            for stage in range(stages):
+            figure_index = 0
+            candidate_stages = [0, 1, 2, 3]
+            candidate_methods = [0, 2]
+            target_dim = 2
+            tsne_data = dict()
+            for stage in candidate_stages:
+                saver.restore(sess, 'tmp/saved/ffn_model/%s_stage_%d' % (tag, stage))
                 features = np.zeros((len(methods), n_examples, dim_hidden))
                 train_x = train_xs[stage]
                 train_y = train_ys[stage]
-                for example_ind in range(train_x.shape[0]):
+                batch_size = 1000
+                cur_example = 0
+                while cur_example < n_examples:
+                    logger.info('store features... stage %d, example %d' % (stage, cur_example))
+                    end_example = min(n_examples, cur_example + batch_size)
                     for method_ind, method in enumerate(methods):
-                        resutls = method.train(sess, train_x[[example_ind], :], train_y[[example_ind], :])
-                        error = resutls[0]
-                        outgoing_weight, feature_matrix = sess.run([method.outgoing_weight, method.feature_matrix])
-                        index = example_ind + stage * n_examples
-                        outgoing_weight_track[method_ind, run, index] = \
-                            np.sum(np.power(outgoing_weight - initial_outgoing_weight[method_ind], 2))
-                        feature_matrix_track[method_ind, run, index] = \
-                            np.sum(np.power(feature_matrix - initial_feature_matrix[method_ind], 2))
-                        train_error[method_ind, run, index] = error
-                        logger.info('run %d, stage %d, example %d, %s, error %f' %
-                                    (run, stage, example_ind, labels[method_ind], error))
-                saver.save(sess, 'tmp/saved/ffn_model/%s_stage_%d' % (tag, stage))
+                        cur_features = sess.run(method.feature, feed_dict={
+                            method.x: train_x[cur_example: end_example, :],
+                            method.target: train_y[cur_example: end_example, :]
+                        })
+                        features[method_ind, cur_example: end_example, :] = cur_features
+                    cur_example = end_example
+                sample_indices = np.arange(2500)
+                for repeat in range(repeats):
+                    np.random.shuffle(sample_indices)
+                    for method_ind in candidate_methods:
+                        x_to_plot = features[method_ind, sample_indices, :]
+                        y_to_plot = np.argmax(train_y[sample_indices, :], axis=1)
+                        print x_to_plot.shape, y_to_plot.shape
+                        x_prime = tsne(x_to_plot, target_dim, 50, 20.0)
+                        tsne_data[(stage, method_ind)] = (x_prime, y_to_plot)
+                        # fig = plt.figure(figure_index)
+                        # figure_index += 1
+                        # ax = Axes3D(fig)
+                        # ax.scatter(x_prime[:, 0], x_prime[:, 1], x_prime[:, 2], c=y_to_plot)
+                        # plt.scatter(x_prime[:, 0], x_prime[:, 1], 20, y_to_plot)
+                        # plt.title('%s_%s_stage_%d' % (tag, labels[method_ind], stage))
+                        # plt.show()
+                        # plt.savefig('figure/%s_repeat_%d_%s_stage_%d.png' % (tag, repeat, labels[method_ind], stage))
+                        # plt.close()
+                        # plt.show()
+            with open('tmp/tsne_dim_%d.bin' % target_dim, 'wb') as f:
+                pickle.dump(tsne_data, f)
 
-    file_path = 'tmp/%s_%s.bin' % (tag, str(learning_rate))
-    with open(file_path, 'wb') as f:
-        pickle.dump({'error': train_error,
-                     'outgoing_weight_track': outgoing_weight_track,
-                     'feature_matrix_track': feature_matrix_track
-                     }, f)
-
-step_sizes = [0.0005]
-for step_size in step_sizes:
-    train(step_size, 50000)
-
-
-
+draw(0.0005, 50000, 1)

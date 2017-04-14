@@ -123,6 +123,7 @@ class CrossPropAlt:
             self.x = bottom_layer.x
             var_in = bottom_layer.var_out
             trainable_vars = bottom_layer.trainable_vars
+            self.bottom_layer = bottom_layer
 
         self.h = tf.placeholder(tf.float32, shape=(dim_hidden, dim_out))
 
